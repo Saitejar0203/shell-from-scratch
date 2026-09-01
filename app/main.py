@@ -7,6 +7,9 @@ def main():
       sys.stdout.write("$ ")
       # Captures the user's command in the "command" variable
       command = input()
+      if command == "exit":
+         break
+      # Exit the shell
       # Prints the "<command>: command not found" message
       print(f"{command}: command not found")
       pass
