@@ -9,10 +9,11 @@ def main():
       command = input()
       if command == "exit":
          break
-      # Exit the shell
-      # Prints the "<command>: command not found" message
-      print(f"{command}: command not found")
-      pass
+      elif command.startswith("echo "):
+         print(command[5:])
+      else:
+         # Prints the "<command>: command not found" message
+         print(f"{command}: command not found")
 
 
 if __name__ == "__main__":
