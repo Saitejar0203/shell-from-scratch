@@ -22,11 +22,13 @@ def main():
       command = input()
       if command == "exit":
          break
+      elif command == "pwd":
+         print(os.getcwd())
       elif command.startswith("echo "):
          print(command[5:])
       elif command.startswith("type "):
          command_name = command[5:]
-         if command_name in ("echo", "exit", "type"):
+         if command_name in ("echo", "exit", "pwd", "type"):
             print(f"{command_name} is a shell builtin")
          else:
             executable_path = find_executable(command_name)
