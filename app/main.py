@@ -2,7 +2,7 @@ import sys
 
 
 def main():
-    While True:
+    while True:
       #TODO: Uncomment the code below to pass the first stage
       sys.stdout.write("$ ")
       # Captures the user's command in the "command" variable
