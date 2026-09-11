@@ -27,6 +27,13 @@ def parse_command(command):
         if quote is not None:
             if character == quote:
                 quote = None
+            elif quote == '"' and character == "\\":
+                escaped = next(characters, None)
+                if escaped is None:
+                    raise ValueError("unmatched quote")
+                if escaped not in '\\"$`':
+                    current.append("\\")
+                current.append(escaped)
             else:
                 current.append(character)
         elif character == "\\":
