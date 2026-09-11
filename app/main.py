@@ -18,16 +18,21 @@ def parse_command(command):
     arguments = []
     quoted_arguments = []
     current = []
-    inside_quotes = False
+    quote = None
     argument_started = False
     argument_quoted = False
 
     for character in command:
-        if character == "'":
-            inside_quotes = not inside_quotes
+        if quote is not None:
+            if character == quote:
+                quote = None
+            else:
+                current.append(character)
+        elif character in "\"'":
+            quote = character
             argument_started = True
             argument_quoted = True
-        elif character in " \t" and not inside_quotes:
+        elif character in " \t":
             if argument_started:
                 arguments.append("".join(current))
                 quoted_arguments.append(argument_quoted)
@@ -38,8 +43,8 @@ def parse_command(command):
             current.append(character)
             argument_started = True
 
-    if inside_quotes:
-        raise ValueError("unmatched single quote")
+    if quote is not None:
+        raise ValueError("unmatched quote")
     if argument_started:
         arguments.append("".join(current))
         quoted_arguments.append(argument_quoted)
