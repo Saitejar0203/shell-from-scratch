@@ -14,27 +14,66 @@ def find_executable(command_name):
     return None
 
 
+def parse_command(command):
+    arguments = []
+    quoted_arguments = []
+    current = []
+    inside_quotes = False
+    argument_started = False
+    argument_quoted = False
+
+    for character in command:
+        if character == "'":
+            inside_quotes = not inside_quotes
+            argument_started = True
+            argument_quoted = True
+        elif character in " \t" and not inside_quotes:
+            if argument_started:
+                arguments.append("".join(current))
+                quoted_arguments.append(argument_quoted)
+                current = []
+                argument_started = False
+                argument_quoted = False
+        else:
+            current.append(character)
+            argument_started = True
+
+    if inside_quotes:
+        raise ValueError("unmatched single quote")
+    if argument_started:
+        arguments.append("".join(current))
+        quoted_arguments.append(argument_quoted)
+
+    # Keep quote information so cd does not expand a quoted tilde.
+    return arguments, quoted_arguments
+
+
 def main():
     while True:
       #TODO: Uncomment the code below to pass the first stage
       sys.stdout.write("$ ")
       # Captures the user's command in the "command" variable
       command = input()
-      command_parts = command.split()
+      try:
+         command_parts, quoted_arguments = parse_command(command)
+      except ValueError as error:
+         print(f"shell: {error}", file=sys.stderr)
+         continue
       if not command_parts:
          continue
 
-      if command == "exit":
+      command_name = command_parts[0]
+      if command_name == "exit":
          break
-      elif command == "pwd":
+      elif command_name == "pwd":
          print(os.getcwd())
-      elif command_parts[0] == "cd":
+      elif command_name == "cd":
          if len(command_parts) != 2:
             print("cd: expected one directory argument", file=sys.stderr)
             continue
 
          path = command_parts[1]
-         if path == "~":
+         if path == "~" and not quoted_arguments[1]:
             path = os.environ.get("HOME")
             if path is None:
                print("cd: HOME not set", file=sys.stderr)
@@ -44,10 +83,13 @@ def main():
             os.chdir(path)
          except OSError as error:
             print(f"cd: {path}: {error.strerror}", file=sys.stderr)
-      elif command.startswith("echo "):
-         print(command[5:])
-      elif command.startswith("type "):
-         command_name = command[5:]
+      elif command_name == "echo":
+         print(" ".join(command_parts[1:]))
+      elif command_name == "type":
+         if len(command_parts) != 2:
+            print("type: expected one command argument", file=sys.stderr)
+            continue
+         command_name = command_parts[1]
          if command_name in ("echo", "exit", "pwd", "type", "cd"):
             print(f"{command_name} is a shell builtin")
          else:
@@ -57,7 +99,6 @@ def main():
             else:
                print(f"{command_name}: not found")
       else:
-         command_name = command_parts[0]
          executable_path = find_executable(command_name)
 
          if executable_path is not None:
