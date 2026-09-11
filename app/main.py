@@ -1,6 +1,6 @@
-import os
+import os 
 import subprocess
-import sys
+import sys 
 
 
 def find_executable(command_name):
@@ -20,15 +20,29 @@ def main():
       sys.stdout.write("$ ")
       # Captures the user's command in the "command" variable
       command = input()
+      command_parts = command.split()
+      if not command_parts:
+         continue
+
       if command == "exit":
          break
       elif command == "pwd":
          print(os.getcwd())
+      elif command_parts[0] == "cd":
+         if len(command_parts) != 2:
+            print("cd: expected one directory argument", file=sys.stderr)
+            continue
+
+         path = command_parts[1]
+         try:
+            os.chdir(path)
+         except OSError as error:
+            print(f"cd: {path}: {error.strerror}", file=sys.stderr)
       elif command.startswith("echo "):
          print(command[5:])
       elif command.startswith("type "):
          command_name = command[5:]
-         if command_name in ("echo", "exit", "pwd", "type"):
+         if command_name in ("echo", "exit", "pwd", "type", "cd"):
             print(f"{command_name} is a shell builtin")
          else:
             executable_path = find_executable(command_name)
@@ -37,10 +51,6 @@ def main():
             else:
                print(f"{command_name}: not found")
       else:
-         command_parts = command.split()
-         if not command_parts:
-            continue
-
          command_name = command_parts[0]
          executable_path = find_executable(command_name)
 
