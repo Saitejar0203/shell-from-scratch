@@ -22,12 +22,20 @@ def parse_command(command):
     argument_started = False
     argument_quoted = False
 
-    for character in command:
+    characters = iter(command)
+    for character in characters:
         if quote is not None:
             if character == quote:
                 quote = None
             else:
                 current.append(character)
+        elif character == "\\":
+            escaped = next(characters, None)
+            if escaped is None:
+                raise ValueError("trailing backslash")
+            current.append(escaped)
+            argument_started = True
+            argument_quoted = True
         elif character in "\"'":
             quote = character
             argument_started = True
