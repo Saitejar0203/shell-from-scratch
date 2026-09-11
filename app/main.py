@@ -34,6 +34,12 @@ def main():
             continue
 
          path = command_parts[1]
+         if path == "~":
+            path = os.environ.get("HOME")
+            if path is None:
+               print("cd: HOME not set", file=sys.stderr)
+               continue
+
          try:
             os.chdir(path)
          except OSError as error:
