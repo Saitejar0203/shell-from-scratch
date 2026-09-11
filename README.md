@@ -1,34 +1,62 @@
-[![progress-banner](https://backend.codecrafters.io/progress/shell/720cfdc2-d9aa-4e92-9fc3-73515263c6f9)](https://app.codecrafters.io/users/Saitejar0203?r=2qF)
+# Shell in Python
 
-This is a starting point for Python solutions to the
-["Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
+A small Unix-style shell built in Python to learn operating-system basics through implementation: processes, executable lookup, working directories, environment variables, and standard input/output.
 
-In this challenge, you'll build your own POSIX compliant shell that's capable of
-interpreting shell commands, running external programs and builtin commands like
-cd, pwd, echo and more. Along the way, you'll learn about shell command parsing,
-REPLs, builtin commands, and more.
+The goal is to understand what happens between typing a command and seeing its result, then build up the shell one feature at a time.
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+## Features
 
-# Passing the first stage
+- An interactive command loop with a `$ ` prompt.
+- Builtins: `echo`, `exit`, `pwd`, `cd`, and `type`.
+- Executable discovery through `PATH` and external program execution.
+- Directory navigation using absolute paths, relative paths, and `cd ~` through `HOME`.
+- Single and double quotes, adjacent quoted strings, and backslash escaping.
+- Quoted executable names and filenames containing spaces.
+- Error messages for invalid commands, failed directory changes, and unmatched quotes.
 
-The entry point for your `shell` implementation is in `app/main.py`. Study and
-uncomment the relevant code, then run the command below to execute the tests on
-our servers:
+## Run locally
+
+Use macOS or Linux with [uv](https://docs.astral.sh/uv/) installed. The project targets Python 3.14.
 
 ```sh
-codecrafters submit
+git clone https://github.com/Saitejar0203/shell-in-python.git
+cd shell-in-python
+./your_program.sh
 ```
 
-Time to move on to the next stage!
+Inside the shell, try:
 
-# Stage 2 & beyond
+```sh
+pwd
+echo 'hello    world'
+type echo
+type ls
+ls
+cd /tmp
+pwd
+cd ~
+exit
+```
 
-Note: This section is for stages 2 and beyond.
+## How it works
 
-1. Ensure you have `uv` installed locally
-1. Run `./your_program.sh` to run your program, which is implemented in
-   `app/main.py`.
-1. Run `codecrafters submit` to submit your solution to CodeCrafters. Test
-   output will be streamed to your terminal.
+The implementation is in [`app/main.py`](app/main.py):
+
+1. `parse_command()` turns input into arguments while tracking quotes and escapes.
+2. `main()` handles builtins within the shell process.
+3. `find_executable()` searches the directories listed in `PATH`.
+4. `subprocess.run()` launches external programs and waits for them to finish.
+
+`cd` changes the shell process's own working directory. External programs inherit its working directory, environment, and standard streams by default.
+
+## Learning focus
+
+- Distinguishing a shell from the terminal that hosts it.
+- Understanding process launch, inheritance, and waiting.
+- Seeing how `PATH` and `HOME` influence program behavior.
+- Connecting standard streams and file descriptors to input and output.
+- Separating command parsing from command execution.
+
+## Project status
+
+This is an evolving learning project, not a complete POSIX shell. Redirection, pipelines, job control, history, and variable expansion are not implemented yet. Multiline input and full interactive signal handling are also outside the current implementation.
