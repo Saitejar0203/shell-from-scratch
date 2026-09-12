@@ -55,7 +55,7 @@ def describe_command(command_parts):
             print(f"{command_name}: not found")
 
 
-def execute_command(command_parts, quoted_arguments):
+def execute_command(command_parts, quoted_arguments, jobs):
     """Run a builtin or external program; return True only for an exit request."""
     if not command_parts:
         return False
@@ -69,7 +69,7 @@ def execute_command(command_parts, quoted_arguments):
     elif command_name == "echo":
         print(" ".join(command_parts[1:]))
     elif command_name == "jobs":
-        pass  # Listing tracked jobs is introduced in a later stage.
+        list_jobs(jobs)
     elif command_name == "type":
         describe_command(command_parts)
     else:
@@ -82,7 +82,7 @@ def execute_command(command_parts, quoted_arguments):
     return False
 
 
-def start_background_job(arguments, jobs):
+def start_background_job(arguments, jobs, command_text):
     """Launch an external program and retain its handle without waiting."""
     if not arguments:
         raise ValueError("expected command before &")
@@ -94,5 +94,15 @@ def start_background_job(arguments, jobs):
         return None
     process = subprocess.Popen(arguments, executable=executable)
     job_number = len(jobs) + 1
-    jobs[job_number] = process
+    jobs[job_number] = {"process": process, "command": command_text.strip()}
     return job_number, process.pid
+
+
+def list_jobs(jobs):
+    """List launched jobs in number order; exit detection comes later."""
+    numbers = sorted(jobs)
+    newest = numbers[-1] if numbers else None
+    previous = numbers[-2] if len(numbers) > 1 else None
+    for number in numbers:
+        marker = "+" if number == newest else "-" if number == previous else " "
+        print(f"[{number}]{marker}  {'Running':<24}{jobs[number]['command']}")

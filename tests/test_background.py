@@ -55,8 +55,10 @@ class BackgroundTests(unittest.TestCase):
 
             try:
                 prompt()
+                self.assertEqual(prompt('jobs'), b'$ ')
                 self.assertIn(b'command not found', prompt('nonexistent_background_command &'))
-                for number, command in enumerate(('sleep 30 >output.txt &', 'sleep 30&'), 1):
+                commands = ('sleep 30 >output.txt &', 'sleep 30&', 'sleep \"30\" &')
+                for number, command in enumerate(commands, 1):
                     data = prompt(command)
                     match = re.fullmatch(rb'\[(\d+)\] (\d+)\n\$ ', data)
                     self.assertIsNotNone(match, data)
@@ -64,6 +66,14 @@ class BackgroundTests(unittest.TestCase):
                     children.append(pid)
                     self.assertEqual(int(match[1]), number)
                     os.kill(pid, 0)  # The advertised PID is still a live process.
+                    markers = {1: ['+'], 2: ['-', '+'], 3: [' ', '-', '+']}[number]
+                    expected = ''.join(
+                        f'[{index}]{marker}  Running                 {text}\n'
+                        for index, (marker, text) in enumerate(zip(markers, commands), 1)
+                    ).encode()
+                    self.assertEqual(prompt('jobs'), expected + b'$ ')
+                self.assertEqual(prompt('jobs >listing.txt'), b'$ ')
+                self.assertEqual(Path(folder, 'listing.txt').read_bytes(), expected)
                 self.assertEqual(Path(folder, 'output.txt').read_text(), '')
                 self.assertEqual(prompt('echo responsive'), b'responsive\n$ ')
                 self.assertEqual(prompt('echo "&"'), b'&\n$ ')

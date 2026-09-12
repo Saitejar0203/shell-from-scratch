@@ -30,9 +30,9 @@ def main():
                     continue
                 try:
                     if background:
-                        started_job = start_background_job(command_parts, jobs)
+                        started_job = start_background_job(command_parts, jobs, command)
                     else:
-                        should_exit = execute_command(command_parts, quoted_arguments)
+                        should_exit = execute_command(command_parts, quoted_arguments, jobs)
                 except OSError as error:
                     report_os_error(error)
                     should_exit = False
