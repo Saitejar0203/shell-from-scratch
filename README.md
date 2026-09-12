@@ -9,7 +9,7 @@ The goal is to understand what happens between typing a command and seeing its r
 - An interactive command loop with a `$ ` prompt.
 - Tab completion for builtin and executable command names in `PATH`, with a trailing space after a unique match.
 - Filename completion in any argument: nested paths, directory slashes, shared prefixes, sorted alternatives, and bells for missing matches.
-- Builtins: `echo`, `exit`, `pwd`, `cd`, and `type`.
+- Builtins: `echo`, `exit`, `pwd`, `cd`, `type`, and an empty `jobs` placeholder.
 - Executable discovery through `PATH` and external program execution.
 - Directory navigation using absolute paths, relative paths, and `cd ~` through `HOME`.
 - Single and double quotes, adjacent quoted strings, and backslash escaping.

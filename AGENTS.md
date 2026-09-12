@@ -50,3 +50,10 @@ Passing a stage is evidence that the implementation satisfies its tests; it is n
 - `review`: evaluate Teja's plan or code without changing it.
 - `implement` or `fix`: edit the code, run focused checks, and explain the result.
 - `submit`: run the CodeCrafters submission only when explicitly requested.
+
+## Standing commit and submission authorization
+
+Teja requested on 2026-09-12 that completed implementation changes be committed
+and then submitted using `codecrafters submit` after local verification. This
+authorizes both steps without asking again; a later explicit instruction can
+override it. Do not extend to additional stages without a request.
