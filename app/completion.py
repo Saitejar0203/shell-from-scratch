@@ -2,12 +2,14 @@
 
 import os
 import readline
+import shlex
 import sys
 
 from app.commands import BUILTINS
 
 
 _matches = []
+_programmable = None
 
 
 def matching_commands(prefix):
@@ -53,6 +55,12 @@ def completion_candidates(text):
     """Choose command lookup for the first word, path lookup for any argument."""
     before_word = readline.get_line_buffer()[:readline.get_begidx()]
     if before_word.strip():
+        try:
+            words = shlex.split(before_word)
+        except ValueError:
+            words = before_word.split()
+        if words and _programmable is not None and words[0] in _programmable.specifications:
+            return [name + " " for name in _programmable.candidates(words[0], text)]
         return matching_paths(text)
     return [name + " " for name in matching_commands(text)]
 
@@ -77,8 +85,10 @@ def using_libedit():
             or "libedit" in (readline.__doc__ or ""))
 
 
-def configure_completion():
+def configure_completion(programmable=None):
     """Connect Tab to completion on GNU Readline and macOS libedit."""
+    global _programmable
+    _programmable = programmable
     readline.set_completer_delims(" \t\n")
     readline.set_completer(complete_command)
 

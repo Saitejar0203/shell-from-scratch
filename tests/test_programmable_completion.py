@@ -30,3 +30,18 @@ class ProgrammableCompletionTests(unittest.TestCase):
         self.assertIn("complete -C '/tmp/a script' git\n", result.stdout)
         self.assertIn("complete -C '/tmp/replacement' git\n", result.stdout)
         self.assertEqual(result.stderr, '')
+
+    def make_script(self, folder, body):
+        script = Path(folder, 'completer')
+        script.write_text('#!' + sys.executable + '\n' + body + '\n')
+        script.chmod(0o755)
+        return script
+
+    def test_single_script_candidate_completes_with_space(self):
+        with tempfile.TemporaryDirectory() as folder:
+            script = self.make_script(folder, 'print("run")')
+            with interactive_shell(folder) as exchange:
+                exchange()
+                exchange(f'complete -C {script} echo\r'.encode())
+                self.assertIn(b'run ', exchange(b'echo \t'))
+                self.assertIn(b'run next\r\n', exchange(b'next\r'))

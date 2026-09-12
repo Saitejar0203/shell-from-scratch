@@ -1,4 +1,5 @@
 """Registry and execution of user-provided command completers."""
+import subprocess
 import sys
 
 
@@ -21,3 +22,13 @@ class ProgrammableCompletions:
                 self.specifications[command] = arguments[1]
         else:
             raise ValueError("complete: expected -C or -p")
+
+    def candidates(self, command, text):
+        """Wait for the completer and interpret stdout as candidate lines."""
+        try:
+            result = subprocess.run([self.specifications[command]],
+                                    stdout=subprocess.PIPE, text=True)
+        except OSError:
+            return []
+        return sorted({line for line in result.stdout.splitlines()
+                       if line and line.startswith(text)})

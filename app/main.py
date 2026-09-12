@@ -19,11 +19,11 @@ def report_os_error(error):
 
 def main():
     """Read, parse, redirect, execute, and repeat until exit."""
+    completions = ProgrammableCompletions()
     if sys.stdin.isatty() and sys.stdout.isatty():
-        configure_completion()
+        configure_completion(completions)
     jobs = {}
     variables = Variables()
-    completions = ProgrammableCompletions()
     history = History()
     try:
         history.load()
