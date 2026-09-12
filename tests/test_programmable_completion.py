@@ -115,3 +115,14 @@ class ProgrammableCompletionTests(unittest.TestCase):
                 exchange()
                 exchange(f'complete -C {script} echo\r'.encode())
                 self.expect(exchange, b'reset ', b'echo re\t')
+
+    def test_shared_prefix_extends_then_unique_match_gets_space(self):
+        with tempfile.TemporaryDirectory() as folder:
+            script = self.make_script(folder, "print('checkout\\ncherry-pick')")
+            with interactive_shell(folder) as exchange:
+                exchange()
+                exchange(f'complete -C {script} echo\r'.encode())
+                output = self.expect(exchange, b'che', b'echo c\t')
+                self.assertNotIn(b'\x07', output)
+                self.expect(exchange, b'kout ', b'c\t')
+                self.assertIn(b'checkout next\r\n', exchange(b'next\r'))

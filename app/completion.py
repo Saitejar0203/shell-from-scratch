@@ -63,8 +63,14 @@ def completion_candidates(text):
         if words and _programmable is not None and words[0] in _programmable.specifications:
             previous = words[-1] if words else ""
             point = len(line[:readline.get_endidx()].encode())
-            return [name + " " for name in _programmable.candidates(
-                words[0], text, previous, line=line, point=point)]
+            names = _programmable.candidates(words[0], text, previous, line=line, point=point)
+            if len(names) > 1:
+                common = os.path.commonprefix(names)
+                if len(common) > len(text):
+                    # One prefix replacement avoids libedit's ambiguity bell.
+                    # No trailing space: the user is still editing this word.
+                    return [common]
+            return [name + " " for name in names]
         return matching_paths(text)
     return [name + " " for name in matching_commands(text)]
 
