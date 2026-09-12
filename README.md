@@ -42,14 +42,35 @@ exit
 
 ## How it works
 
-The implementation is in [`app/main.py`](app/main.py):
+Start with [`app/main.py`](app/main.py), then follow the functions it calls:
 
-1. `parse_command()` turns input into arguments while tracking quotes and escapes.
-2. `main()` handles builtins within the shell process.
-3. `find_executable()` searches the directories listed in `PATH`.
-4. `subprocess.run()` launches external programs and waits for them to finish.
+| Module | Responsibility |
+| --- | --- |
+| [`app/main.py`](app/main.py) | Prompt, read input, coordinate each command, and report errors. |
+| [`app/parser.py`](app/parser.py) | Recognize words, quotes, escapes, and redirection operators; separate arguments from redirections. |
+| [`app/redirection.py`](app/redirection.py) | Open output files, temporarily redirect descriptors, then restore and close them. |
+| [`app/commands.py`](app/commands.py) | Handle builtins, search `PATH`, and launch external programs. |
+
+Each command follows this path:
+
+```text
+input → parse_command → extract_redirections
+      → redirect_streams → execute_command → restore streams → next prompt
+```
+
+The parser only processes text. File-descriptor changes belong to `redirection.py`, and command behavior belongs to `commands.py`.
 
 `cd` changes the shell process's own working directory. External programs inherit its working directory, environment, and standard streams by default.
+
+## Local checks
+
+Run from the repository root:
+
+```sh
+uv run python -m unittest discover -s tests -v
+```
+
+The tests launch the shell as a separate process and check file contents, output streams, and error recovery.
 
 ## Learning focus
 

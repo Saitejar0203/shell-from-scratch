@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -5,7 +6,7 @@ import tempfile
 import unittest
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / 'app' / 'main.py'
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 class RedirectionTests(unittest.TestCase):
@@ -15,8 +16,10 @@ class RedirectionTests(unittest.TestCase):
         self.directory = Path(self.temp.name)
 
     def run_shell(self, commands):
+        environment = os.environ.copy()
+        environment['PYTHONPATH'] = str(PROJECT_ROOT)
         return subprocess.run(
-            [sys.executable, str(SCRIPT)],
+            [sys.executable, '-m', 'app.main'], env=environment,
             input=commands + '\nexit\n', text=True, capture_output=True,
             cwd=self.directory, timeout=10,
         )
