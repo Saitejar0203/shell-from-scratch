@@ -46,3 +46,15 @@ class HistoryTests(unittest.TestCase):
             exchange(b'\x1b[A\x1b[A')
             exchange(b'\x1b[B')
             self.assertIn(b'second\r\n', exchange(b'\r'))
+
+    def test_recalled_command_executes_and_is_recorded_once(self):
+        with tempfile.TemporaryDirectory() as folder, interactive_shell(folder) as exchange:
+            exchange()
+            exchange(b'echo recalled > result\r')
+            Path(folder, 'result').unlink()
+            exchange(b'\x1b[A\r')
+            self.assertEqual(Path(folder, 'result').read_text(), 'recalled\n')
+            output = exchange(b'history\r')
+            self.assertIn(b'    1  echo recalled > result', output)
+            self.assertIn(b'    2  echo recalled > result', output)
+            self.assertIn(b'    3  history', output)
