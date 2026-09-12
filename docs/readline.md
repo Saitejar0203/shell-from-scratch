@@ -61,8 +61,12 @@ a unique completion leaves the cursor ready for arguments.
 | `matching_commands(prefix)` | Returns sorted, unique builtin/executable names matching the prefix. |
 | `complete_command(text, state)` | Returns one saved candidate plus a space, or `None`. |
 
-Text before the current word must contain only whitespace. Thus `ech<Tab>`
-completes a command, while `echo ech<Tab>` does not complete an argument.
+Text before the current word determines the search. With only whitespace before
+it, `ech<Tab>` completes a command. Otherwise, `cat re<Tab>` searches filenames
+in the current working directory using `matching_files(text)`. Files need not
+be executable. Even `xyz re<Tab>` can complete to `xyz readme.txt `; an unknown
+command is reported only on Enter, during execution. Directory entries that
+are not files are skipped in this stage.
 The delimiter setting is whitespace; it is not our quote-aware shell parser.
 
 ## Finding partial executable names
@@ -96,7 +100,7 @@ libedit. Setup happens only when stdin and stdout are terminals.
 
 Tests cover candidate filtering, duplicates, refreshed snapshots, argument
 position, and actual Tab input and command execution through a PTY. They do
-not establish full Bash behavior. Filename/argument completion, escaping
+not establish full Bash behavior. Nested paths, directory completion, escaping
 special characters in suggested names, and configurable usage ranking are
 outside this implementation.
 

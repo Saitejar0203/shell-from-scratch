@@ -1,4 +1,5 @@
 import os
+from contextlib import chdir
 from pathlib import Path
 import pty
 import select
@@ -22,6 +23,23 @@ class CompletionTests(unittest.TestCase):
             self.assertIsNone(complete_command('unknown', 0))
         with patch('app.completion.readline.get_line_buffer', return_value='echo ech'), patch('app.completion.readline.get_begidx', return_value=5):
             self.assertIsNone(complete_command('ech', 0))
+
+    def test_filename_arguments_use_current_directory_without_command_validation(self):
+        with tempfile.TemporaryDirectory() as folder, chdir(folder):
+            Path('readme.txt').write_text('file contents')
+            Path('readme.txt').chmod(0o644)
+            Path('read_directory').mkdir()
+            with patch('app.completion.readline.get_begidx', return_value=4):
+                for line in ('cat re', 'xyz re'):
+                    with patch('app.completion.readline.get_line_buffer', return_value=line):
+                        self.assertEqual(complete_command('re', 0), 'readme.txt ')
+                        self.assertIsNone(complete_command('re', 1))
+                        self.assertIsNone(complete_command('absent', 0))
+            Path('another').mkdir()
+            with chdir('another'), patch('app.completion.readline.get_begidx', return_value=4), patch('app.completion.readline.get_line_buffer', return_value='cat re'):
+                self.assertIsNone(complete_command('re', 0))
+                Path('report.txt').write_text('different cwd')
+                self.assertEqual(complete_command('re', 0), 'report.txt ')
 
     def test_path_filters_duplicates_and_refreshes_each_attempt(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -55,6 +73,7 @@ class CompletionTests(unittest.TestCase):
         executable = Path(folder.name) / 'custom_executable'
         executable.write_text('#!/bin/sh\necho external-ok\n')
         executable.chmod(0o755)
+        (Path(folder.name) / 'readme.txt').write_text('file-completion-ok\n')
         pid, descriptor = pty.fork()
         if pid == 0:
             os.chdir(Path(__file__).resolve().parents[1])
@@ -82,6 +101,16 @@ class CompletionTests(unittest.TestCase):
             receive(b'custom_executable ')
             os.write(descriptor, b'\r')
             self.assertIn(b'external-ok\r\n', receive(b'$ '))
+            os.write(descriptor, ('cd ' + folder.name + '\r').encode())
+            receive(b'$ ')
+            os.write(descriptor, b'cat re\t')
+            receive(b'readme.txt ')
+            os.write(descriptor, b'\r')
+            self.assertIn(b'file-completion-ok\r\n', receive(b'$ '))
+            os.write(descriptor, b'xyz re\t')
+            receive(b'readme.txt ')
+            os.write(descriptor, b'\r')
+            self.assertIn(b'xyz: command not found', receive(b'$ '))
             os.write(descriptor, b'exi\t')
             receive(b'exit ')
             os.write(descriptor, b'\r')

@@ -1,4 +1,4 @@
-"""Supply builtin and PATH executable candidates to the line editor."""
+"""Supply command and filename candidates to the line editor."""
 
 import os
 import readline
@@ -27,15 +27,25 @@ def matching_commands(prefix):
     return sorted(names)
 
 
+def matching_files(prefix):
+    """Find file arguments in the current directory; executability is irrelevant."""
+    try:
+        with os.scandir(".") as entries:
+            return sorted(entry.name for entry in entries
+                          if entry.name.startswith(prefix) and entry.is_file())
+    except OSError:
+        return []
+
+
 def complete_command(text, state):
     """Snapshot matches on state 0, then return one candidate per call."""
     global _matches
     before_word = readline.get_line_buffer()[:readline.get_begidx()]
-    if before_word.strip():
-        _matches = []
-        return None
     if state == 0:
-        _matches = matching_commands(text)
+        if before_word.strip():
+            _matches = matching_files(text)
+        else:
+            _matches = matching_commands(text)
     if state < len(_matches):
         return _matches[state] + " "
     return None
