@@ -20,3 +20,7 @@ class ProgrammableCompletionTests(unittest.TestCase):
         result = self.shell('type complete\nexit\n')
         self.assertIn('complete is a shell builtin\n', result.stdout)
         self.assertEqual(result.stderr, '')
+
+    def test_missing_specification_names_the_command(self):
+        result = self.shell('complete -p git\nexit\n')
+        self.assertEqual(result.stderr, 'complete: git: no completion specification\n')

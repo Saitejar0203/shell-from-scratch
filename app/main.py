@@ -7,6 +7,7 @@ from app.completion import configure_completion
 from app.parser import extract_background, extract_redirections, parse_command, split_pipeline
 from app.history import History
 from app.variables import Variables
+from app.programmable import ProgrammableCompletions
 from app.pipeline import execute_pipeline
 from app.redirection import redirect_streams
 
@@ -22,6 +23,7 @@ def main():
         configure_completion()
     jobs = {}
     variables = Variables()
+    completions = ProgrammableCompletions()
     history = History()
     try:
         history.load()
@@ -40,7 +42,7 @@ def main():
             if len(stages) > 1:
                 if background:
                     raise ValueError("background pipelines are not supported")
-                execute_pipeline(stages, jobs, history, variables)
+                execute_pipeline(stages, jobs, history, variables, completions)
                 continue
             started_job = None
             should_exit = False
@@ -52,7 +54,7 @@ def main():
                     if background:
                         started_job = start_background_job(command_parts, jobs, command)
                     else:
-                        should_exit = execute_command(command_parts, quoted_arguments, jobs, history, variables)
+                        should_exit = execute_command(command_parts, quoted_arguments, jobs, history, variables, completions)
                 except OSError as error:
                     report_os_error(error)
                     should_exit = False
