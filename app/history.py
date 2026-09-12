@@ -16,7 +16,11 @@ class History:
                 range(1, readline.get_current_history_length() + 1)]
 
     def run(self, arguments):
+        entries = self.entries()
+        start = 0
         if arguments:
-            raise ValueError("history: unexpected arguments")
-        for number, line in enumerate(self.entries(), 1):
+            if len(arguments) != 1 or not arguments[0].isdigit():
+                raise ValueError("history: expected a non-negative count")
+            start = max(0, len(entries) - int(arguments[0]))
+        for number, line in enumerate(entries[start:], start + 1):
             print(f"{number:5}  {line}")

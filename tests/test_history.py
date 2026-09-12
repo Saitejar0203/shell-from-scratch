@@ -18,3 +18,10 @@ class HistoryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             result = self.shell('echo hello\nmissing_command\nhistory\nexit\n', folder)
             self.assertIn('    1  echo hello\n    2  missing_command\n    3  history\n', result.stdout)
+
+    def test_limit_keeps_original_numbers_and_zero_is_empty(self):
+        with tempfile.TemporaryDirectory() as folder:
+            result = self.shell('echo first\necho second\nhistory 2\nhistory 0\nexit\n', folder)
+            self.assertIn('    2  echo second\n    3  history 2\n', result.stdout)
+            self.assertNotIn('    1  echo first', result.stdout)
+            self.assertNotIn('    4  history 0', result.stdout)
