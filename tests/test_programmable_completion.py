@@ -54,3 +54,13 @@ class ProgrammableCompletionTests(unittest.TestCase):
                 exchange(f'complete -C {script} echo\r'.encode())
                 self.expect(exchange, b'run ', b'echo \t')
                 self.assertIn(b'run next\r\n', exchange(b'next\r'))
+
+    def test_empty_script_result_rings_and_does_not_fall_back_to_files(self):
+        with tempfile.TemporaryDirectory() as folder:
+            script = self.make_script(folder, 'pass')
+            Path(folder, 'xyz_file').write_text('')
+            with interactive_shell(folder) as exchange:
+                exchange()
+                exchange(f'complete -C {script} echo\r'.encode())
+                self.expect(exchange, b'\x07', b'echo xyz\t')
+                self.assertIn(b'xyz\r\n', exchange(b'\r'))
