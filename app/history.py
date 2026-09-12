@@ -5,12 +5,14 @@ import readline
 
 class History:
     def __init__(self):
+        self.pending = []
         readline.clear_history()
         readline.set_auto_history(False)
 
     def record(self, line):
         if line.strip():
             readline.add_history(line)
+            self.pending.append(line)
 
     def entries(self):
         return [readline.get_history_item(i) for i in
@@ -24,11 +26,16 @@ class History:
     def write(self, path):
         Path(path).write_text("".join(line + "\n" for line in self.entries()))
 
+    def append(self, path):
+        with Path(path).open("a") as stream:
+            stream.writelines(line + "\n" for line in self.pending)
+        self.pending.clear()
+
     def run(self, arguments):
-        if arguments and arguments[0] in ("-r", "-w"):
+        if arguments and arguments[0] in ("-r", "-w", "-a"):
             if len(arguments) != 2:
                 raise ValueError(f"history: {arguments[0]} requires a path")
-            action = self.read if arguments[0] == "-r" else self.write
+            action = {"-r": self.read, "-w": self.write, "-a": self.append}[arguments[0]]
             action(arguments[1])
             return
         entries = self.entries()

@@ -71,3 +71,11 @@ class HistoryTests(unittest.TestCase):
             result = self.shell('echo saved\nhistory -w saved\nexit\n', folder)
             self.assertEqual(Path(folder, 'saved').read_text(), 'echo saved\nhistory -w saved\n')
             self.assertEqual(result.stderr, '')
+
+    def test_append_only_new_commands_across_repeated_saves(self):
+        with tempfile.TemporaryDirectory() as folder:
+            Path(folder, 'saved').write_text('old entry\n')
+            result = self.shell('echo first\nhistory -a saved\necho second\nhistory -a saved\nexit\n', folder)
+            self.assertEqual(Path(folder, 'saved').read_text(),
+                             'old entry\necho first\nhistory -a saved\necho second\nhistory -a saved\n')
+            self.assertEqual(result.stderr, '')
