@@ -76,3 +76,21 @@ class ProgrammableCompletionTests(unittest.TestCase):
                 self.expect(exchange, b'set-url ', b'echo remote set\t')
                 exchange(b'\r')
                 self.expect(exchange, b'first ', b'echo \t')
+
+    def test_completer_environment_has_full_line_and_byte_cursor(self):
+        with tempfile.TemporaryDirectory() as folder:
+            script = self.make_script(folder,
+                "import os, json\nfrom pathlib import Path\n"
+                "Path('context').write_text(json.dumps([os.environ['COMP_LINE'], os.environ['COMP_POINT']]))\n"
+                "print('add')")
+            with interactive_shell(folder) as exchange:
+                exchange()
+                exchange(f'complete -C {script} echo\r'.encode())
+                self.expect(exchange, b'add ', 'echo α ad\t'.encode())
+                import json
+                self.assertEqual(json.loads(Path(folder, 'context').read_text()), ['echo α ad', '10'])
+                exchange(b'\r')
+                # Edit an earlier argument: full line includes text after the cursor.
+                self.expect(exchange, b'd  end', b'echo ad end\x1b[D\x1b[D\x1b[D\x1b[D\t')
+                self.assertEqual(json.loads(Path(folder, 'context').read_text()), ['echo ad end', '7'])
+            self.assertNotIn('COMP_LINE', os.environ)

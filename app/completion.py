@@ -53,7 +53,8 @@ def matching_paths(text):
 
 def completion_candidates(text):
     """Choose command lookup for the first word, path lookup for any argument."""
-    before_word = readline.get_line_buffer()[:readline.get_begidx()]
+    line = readline.get_line_buffer()
+    before_word = line[:readline.get_begidx()]
     if before_word.strip():
         try:
             words = shlex.split(before_word)
@@ -61,7 +62,9 @@ def completion_candidates(text):
             words = before_word.split()
         if words and _programmable is not None and words[0] in _programmable.specifications:
             previous = words[-1] if len(words) > 1 else ""
-            return [name + " " for name in _programmable.candidates(words[0], text, previous)]
+            point = len(line[:readline.get_endidx()].encode())
+            return [name + " " for name in _programmable.candidates(
+                words[0], text, previous, line=line, point=point)]
         return matching_paths(text)
     return [name + " " for name in matching_commands(text)]
 
