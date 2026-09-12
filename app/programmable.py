@@ -23,10 +23,10 @@ class ProgrammableCompletions:
         else:
             raise ValueError("complete: expected -C or -p")
 
-    def candidates(self, command, text):
+    def candidates(self, command, text, previous=""):
         """Wait for the completer and interpret stdout as candidate lines."""
         try:
-            result = subprocess.run([self.specifications[command]],
+            result = subprocess.run([self.specifications[command], command, text, previous],
                                     stdout=subprocess.PIPE, text=True)
         except OSError:
             return []

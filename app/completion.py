@@ -60,7 +60,8 @@ def completion_candidates(text):
         except ValueError:
             words = before_word.split()
         if words and _programmable is not None and words[0] in _programmable.specifications:
-            return [name + " " for name in _programmable.candidates(words[0], text)]
+            previous = words[-1] if len(words) > 1 else ""
+            return [name + " " for name in _programmable.candidates(words[0], text, previous)]
         return matching_paths(text)
     return [name + " " for name in matching_commands(text)]
 

@@ -64,3 +64,15 @@ class ProgrammableCompletionTests(unittest.TestCase):
                 exchange(f'complete -C {script} echo\r'.encode())
                 self.expect(exchange, b'\x07', b'echo xyz\t')
                 self.assertIn(b'xyz\r\n', exchange(b'\r'))
+
+    def test_script_receives_command_current_and_previous_arguments(self):
+        with tempfile.TemporaryDirectory() as folder:
+            script = self.make_script(folder,
+                "import sys\nif sys.argv[1:] == ['echo', 'set', 'remote']: print('set-url')\n"
+                "elif sys.argv[1:] == ['echo', '', '']: print('first')")
+            with interactive_shell(folder) as exchange:
+                exchange()
+                exchange(f'complete -C {script} echo\r'.encode())
+                self.expect(exchange, b'set-url ', b'echo remote set\t')
+                exchange(b'\r')
+                self.expect(exchange, b'first ', b'echo \t')
