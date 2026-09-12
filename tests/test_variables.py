@@ -35,3 +35,14 @@ class VariableTests(unittest.TestCase):
         self.assertIn("declare: `bad-name=y': not a valid identifier\n", result.stderr)
         self.assertIn('declare: 23: not found\n', result.stderr)
         self.assertIn('declare -- _FOO="bar"\n', result.stdout)
+
+    def test_expansion_respects_quotes_and_never_reparses_operators(self):
+        result = self.shell("declare name=hello\necho $name \"$name\" '$name' \\$name\ndeclare literal='a|b>c'\necho $literal\nexit\n")
+        self.assertIn('hello hello $name $name\n', result.stdout)
+        self.assertIn('a|b>c\n', result.stdout)
+        self.assertEqual(result.stderr, '')
+
+    def test_expansion_reaches_external_program_arguments(self):
+        result = self.shell("declare one=first two=second\nprintf '<%s>\\n' $one $two\nexit\n")
+        self.assertIn('<first>\n<second>\n', result.stdout)
+        self.assertEqual(result.stderr, '')

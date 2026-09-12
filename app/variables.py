@@ -28,3 +28,11 @@ class Variables:
                 self.values[name] = value
             else:
                 self.values.setdefault(name, "")
+
+
+def expansion_at(command, index, values):
+    """Return (replacement, consumed length), or None for a literal dollar."""
+    match = re.match(r"\$([A-Za-z_][A-Za-z0-9_]*)", command[index:])
+    if match is None:
+        return None
+    return values.get(match[1], match[0]), len(match[0])

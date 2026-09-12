@@ -1,7 +1,10 @@
 """Turn command-line text into words and redirection instructions."""
 
 
-def parse_command(command):
+from app.variables import expansion_at
+
+
+def parse_command(command, variables=None):
     """Read words and operators, respecting quotes and backslash escapes.
 
     Tokens are (kind, value, quoted). Word values are strings; redirect
@@ -15,6 +18,16 @@ def parse_command(command):
 
     characters = iter(enumerate(command))
     for index, character in characters:
+        if character == "$" and quote != "'" and variables is not None:
+            expansion = expansion_at(command, index, variables)
+            if expansion is not None:
+                value, length = expansion
+                for _ in range(length - 1):
+                    next(characters)
+                # Expanded text is data, never parsed again as operators or quotes.
+                current.append(value)
+                argument_started = True
+                continue
         if quote is not None:
             if character == quote:
                 quote = None

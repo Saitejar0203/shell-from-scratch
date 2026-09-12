@@ -35,7 +35,7 @@ def main():
             break
         history.record(command)
         try:
-            tokens, background = extract_background(parse_command(command))
+            tokens, background = extract_background(parse_command(command, variables.values))
             stages = split_pipeline(tokens)
             if len(stages) > 1:
                 if background:
