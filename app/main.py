@@ -2,9 +2,9 @@
 
 import sys
 
-from app.commands import execute_command
+from app.commands import execute_command, start_background_job
 from app.completion import configure_completion
-from app.parser import extract_redirections, parse_command
+from app.parser import extract_background, extract_redirections, parse_command
 from app.redirection import redirect_streams
 
 
@@ -17,19 +17,28 @@ def main():
     """Read, parse, redirect, execute, and repeat until exit."""
     if sys.stdin.isatty() and sys.stdout.isatty():
         configure_completion()
+    jobs = {}
     while True:
         command = input("$ ")
         try:
-            tokens = parse_command(command)
+            tokens, background = extract_background(parse_command(command))
+            started_job = None
+            should_exit = False
             command_parts, quoted_arguments, destinations = extract_redirections(tokens)
             with redirect_streams(destinations) as ready:
                 if not ready:
                     continue
                 try:
-                    should_exit = execute_command(command_parts, quoted_arguments)
+                    if background:
+                        started_job = start_background_job(command_parts, jobs)
+                    else:
+                        should_exit = execute_command(command_parts, quoted_arguments)
                 except OSError as error:
                     report_os_error(error)
                     should_exit = False
+            if started_job is not None:
+                job_number, pid = started_job
+                print(f"[{job_number}] {pid}")
             if should_exit:
                 break
         except ValueError as error:

@@ -38,6 +38,13 @@ def parse_command(command):
             quote = character
             argument_started = True
             argument_quoted = True
+        elif character == "&":
+            if argument_started:
+                tokens.append(("word", "".join(current), argument_quoted))
+            tokens.append(("background", "&", False))
+            current = []
+            argument_started = False
+            argument_quoted = False
         elif character == ">":
             word = "".join(current)
             descriptor = 1
@@ -94,3 +101,15 @@ def extract_redirections(tokens):
             quoted_arguments.append(quoted)
         index += 1
     return arguments, quoted_arguments, destinations
+
+
+def extract_background(tokens):
+    """Remove a final unquoted &, rejecting unsupported command lists."""
+    background = bool(tokens and tokens[-1][0] == "background")
+    if background:
+        tokens = tokens[:-1]
+    if any(kind == "background" for kind, _, _ in tokens):
+        raise ValueError("& is only supported at the end of a command")
+    if background and not tokens:
+        raise ValueError("expected command before &")
+    return tokens, background

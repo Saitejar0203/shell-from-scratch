@@ -69,7 +69,7 @@ def execute_command(command_parts, quoted_arguments):
     elif command_name == "echo":
         print(" ".join(command_parts[1:]))
     elif command_name == "jobs":
-        pass  # No background jobs are tracked yet.
+        pass  # Listing tracked jobs is introduced in a later stage.
     elif command_name == "type":
         describe_command(command_parts)
     else:
@@ -80,3 +80,19 @@ def execute_command(command_parts, quoted_arguments):
         else:
             print(f"{command_name}: command not found", file=sys.stderr)
     return False
+
+
+def start_background_job(arguments, jobs):
+    """Launch an external program and retain its handle without waiting."""
+    if not arguments:
+        raise ValueError("expected command before &")
+    if arguments[0] in BUILTINS:
+        raise ValueError("background builtins are not supported yet")
+    executable = find_executable(arguments[0])
+    if executable is None:
+        print(f"{arguments[0]}: command not found", file=sys.stderr)
+        return None
+    process = subprocess.Popen(arguments, executable=executable)
+    job_number = len(jobs) + 1
+    jobs[job_number] = process
+    return job_number, process.pid

@@ -10,6 +10,7 @@ The goal is to understand what happens between typing a command and seeing its r
 - Tab completion for builtin and executable command names in `PATH`, with a trailing space after a unique match.
 - Filename completion in any argument: nested paths, directory slashes, shared prefixes, sorted alternatives, and bells for missing matches.
 - Builtins: `echo`, `exit`, `pwd`, `cd`, `type`, and an empty `jobs` placeholder.
+- Background external commands using a trailing `&`, with sequential job numbers and OS process IDs.
 - Executable discovery through `PATH` and external program execution.
 - Directory navigation using absolute paths, relative paths, and `cd ~` through `HOME`.
 - Single and double quotes, adjacent quoted strings, and backslash escaping.
@@ -87,4 +88,4 @@ The tests launch the shell as a separate process and check file contents, output
 
 ## Project status
 
-This is an evolving learning project, not a complete POSIX shell. Pipelines, job control, history, and variable expansion are not implemented yet. Multiline input and full interactive signal handling are also outside the current implementation.
+This is an evolving learning project, not a complete POSIX shell. Pipelines, full job control, history, and variable expansion are not implemented yet. Background launch is supported; job listing, completion notifications, and explicit reaping are upcoming. Multiline input and full interactive signal handling are also outside the current implementation.
