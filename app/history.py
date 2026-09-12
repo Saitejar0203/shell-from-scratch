@@ -6,6 +6,7 @@ import readline
 
 class History:
     def __init__(self):
+        self.path = None
         self.pending = []
         readline.clear_history()
         readline.set_auto_history(False)
@@ -17,6 +18,10 @@ class History:
                 self.read(self.path)
             except FileNotFoundError:
                 pass  # A first session has no saved history yet.
+
+    def save(self):
+        if self.path:
+            self.write(self.path)
 
     def record(self, line):
         if line.strip():

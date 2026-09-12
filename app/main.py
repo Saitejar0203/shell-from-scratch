@@ -64,6 +64,11 @@ def main():
         except OSError as error:
             report_os_error(error)
 
+    try:
+        history.save()
+    except OSError as error:
+        report_os_error(error)
+
 
 if __name__ == "__main__":
     main()

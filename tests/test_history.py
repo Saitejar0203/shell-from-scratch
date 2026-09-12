@@ -88,3 +88,12 @@ class HistoryTests(unittest.TestCase):
             self.assertIn('    1  echo previous\n    2  history\n', result.stdout)
             result = self.shell('echo ready\nexit\n', folder, HISTFILE=str(Path(folder, 'new')))
             self.assertEqual(result.stderr, '')
+
+    def test_exit_and_eof_save_history(self):
+        with tempfile.TemporaryDirectory() as folder:
+            saved = Path(folder, 'saved')
+            self.shell('echo saved\nexit\n', folder, HISTFILE=str(saved))
+            self.assertEqual(saved.read_text(), 'echo saved\nexit\n')
+            eof_file = Path(folder, 'eof')
+            self.shell('echo eof\n', folder, HISTFILE=str(eof_file))
+            self.assertEqual(eof_file.read_text(), 'echo eof\n')
