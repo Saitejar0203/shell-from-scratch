@@ -35,3 +35,9 @@ class PipelineTests(unittest.TestCase):
             self.assertRegex(result.stdout, r'\$\s+6\n\$ exit is a shell builtin')
             self.assertIn(folder, result.stdout)
             self.assertEqual(result.stderr, '')
+
+    def test_multiple_stages_and_early_consumer_exit(self):
+        with tempfile.TemporaryDirectory() as folder:
+            result = self.shell('echo hello | cat | cat | wc -c\nyes | head -n 3 | wc -l\nexit\n', folder)
+            self.assertRegex(result.stdout, r'\$\s+6\n\$\s+3\n')
+            self.assertEqual(result.stderr, '')

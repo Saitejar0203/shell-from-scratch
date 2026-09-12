@@ -14,14 +14,13 @@ def execute_pipeline(stages, jobs):
     commands = [extract_redirections(stage) for stage in stages]
     if any(not arguments for arguments, _, _ in commands):
         raise ValueError("expected command in pipeline")
-    if len(commands) != 2:
-        raise ValueError("expected two pipeline commands")
     pipes = []
     children = []
     sys.stdout.flush()
     sys.stderr.flush()
     try:
-        pipes = [os.pipe() for _ in range(len(commands) - 1)]
+        for _ in range(len(commands) - 1):
+            pipes.append(os.pipe())
         for index, (arguments, quoted, destinations) in enumerate(commands):
             pid = os.fork()
             if pid == 0:
