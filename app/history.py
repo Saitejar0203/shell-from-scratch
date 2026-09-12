@@ -1,4 +1,5 @@
 """One Readline history list for listing and interactive recall."""
+import os
 from pathlib import Path
 import readline
 
@@ -8,6 +9,14 @@ class History:
         self.pending = []
         readline.clear_history()
         readline.set_auto_history(False)
+
+    def load(self):
+        self.path = os.environ.get("HISTFILE")
+        if self.path:
+            try:
+                self.read(self.path)
+            except FileNotFoundError:
+                pass  # A first session has no saved history yet.
 
     def record(self, line):
         if line.strip():

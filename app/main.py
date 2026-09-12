@@ -21,6 +21,10 @@ def main():
         configure_completion()
     jobs = {}
     history = History()
+    try:
+        history.load()
+    except OSError as error:
+        report_os_error(error)
     while True:
         list_jobs(jobs, completed_only=True)
         try:
