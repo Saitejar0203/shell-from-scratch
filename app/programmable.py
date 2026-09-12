@@ -9,4 +9,15 @@ class ProgrammableCompletions:
     def run(self, arguments):
         if arguments and arguments[0] == "-p":
             for command in arguments[1:]:
-                print(f"complete: {command}: no completion specification", file=sys.stderr)
+                if command in self.specifications:
+                    path = self.specifications[command].replace("'", "'\\''")
+                    print(f"complete -C '{path}' {command}")
+                else:
+                    print(f"complete: {command}: no completion specification", file=sys.stderr)
+        elif arguments and arguments[0] == "-C":
+            if len(arguments) < 3:
+                raise ValueError("complete: -C requires a script and command")
+            for command in arguments[2:]:
+                self.specifications[command] = arguments[1]
+        else:
+            raise ValueError("complete: expected -C or -p")

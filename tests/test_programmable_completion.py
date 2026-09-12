@@ -24,3 +24,9 @@ class ProgrammableCompletionTests(unittest.TestCase):
     def test_missing_specification_names_the_command(self):
         result = self.shell('complete -p git\nexit\n')
         self.assertEqual(result.stderr, 'complete: git: no completion specification\n')
+
+    def test_registration_prints_normalized_specification(self):
+        result = self.shell("complete   -C '/tmp/a script'   git\ncomplete -p git\ncomplete -C /tmp/replacement git\ncomplete -p git\nexit\n")
+        self.assertIn("complete -C '/tmp/a script' git\n", result.stdout)
+        self.assertIn("complete -C '/tmp/replacement' git\n", result.stdout)
+        self.assertEqual(result.stderr, '')
