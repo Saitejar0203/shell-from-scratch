@@ -28,3 +28,10 @@ class PipelineTests(unittest.TestCase):
             result = self.shell('echo hi >out |\nexit\n', folder)
             self.assertIn('expected command after pipe', result.stderr)
             self.assertFalse(Path(folder, 'out').exists())
+
+    def test_builtin_pipeline_and_child_directory_isolation(self):
+        with tempfile.TemporaryDirectory() as folder:
+            result = self.shell('echo hello | wc -c\nls | type exit\ncd / | cat\npwd\nexit\n', folder)
+            self.assertRegex(result.stdout, r'\$\s+6\n\$ exit is a shell builtin')
+            self.assertIn(folder, result.stdout)
+            self.assertEqual(result.stderr, '')

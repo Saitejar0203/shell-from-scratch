@@ -4,7 +4,7 @@ import os
 import signal
 import sys
 
-from app.commands import find_executable
+from app.commands import BUILTINS, execute_command, find_executable
 from app.parser import extract_redirections
 from app.redirection import redirect_streams
 
@@ -37,6 +37,12 @@ def execute_pipeline(stages, jobs):
                         os.close(write_fd)
                     with redirect_streams(destinations) as ready:
                         if ready:
+                            if arguments[0] in BUILTINS:
+                                execute_command(arguments, quoted, jobs)
+                                status = 0
+                                sys.stdout.flush()
+                                sys.stderr.flush()
+                                os._exit(status)
                             executable = find_executable(arguments[0])
                             if executable is None:
                                 print(f"{arguments[0]}: command not found", file=sys.stderr)
