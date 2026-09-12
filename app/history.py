@@ -1,4 +1,5 @@
 """One Readline history list for listing and interactive recall."""
+from pathlib import Path
 import readline
 
 
@@ -15,7 +16,17 @@ class History:
         return [readline.get_history_item(i) for i in
                 range(1, readline.get_current_history_length() + 1)]
 
+    def read(self, path):
+        for line in Path(path).read_text().splitlines():
+            if line.strip():
+                readline.add_history(line)
+
     def run(self, arguments):
+        if arguments and arguments[0] == "-r":
+            if len(arguments) != 2:
+                raise ValueError("history: -r requires a path")
+            self.read(arguments[1])
+            return
         entries = self.entries()
         start = 0
         if arguments:

@@ -58,3 +58,10 @@ class HistoryTests(unittest.TestCase):
             self.assertIn(b'    1  echo recalled > result', output)
             self.assertIn(b'    2  echo recalled > result', output)
             self.assertIn(b'    3  history', output)
+
+    def test_read_appends_file_entries_after_current_command(self):
+        with tempfile.TemporaryDirectory() as folder:
+            Path(folder, 'saved').write_text('echo loaded\n\n')
+            result = self.shell('history -r saved\nhistory\nexit\n', folder)
+            self.assertIn('    1  history -r saved\n    2  echo loaded\n    3  history\n', result.stdout)
+            self.assertEqual(result.stderr, '')
