@@ -37,3 +37,12 @@ class HistoryTests(unittest.TestCase):
             # Readline redraws only the changed suffix on some terminals.
             exchange(b'\x1b[A')
             self.assertIn(b'first\r\n', exchange(b'\r'))
+
+    def test_down_arrow_returns_to_newer_command(self):
+        with tempfile.TemporaryDirectory() as folder, interactive_shell(folder) as exchange:
+            exchange()
+            exchange(b'echo first\r')
+            exchange(b'echo second\r')
+            exchange(b'\x1b[A\x1b[A')
+            exchange(b'\x1b[B')
+            self.assertIn(b'second\r\n', exchange(b'\r'))
