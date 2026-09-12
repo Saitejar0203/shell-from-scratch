@@ -21,8 +21,11 @@ class ProgrammableCompletions:
                 raise ValueError("complete: -C requires a script and command")
             for command in arguments[2:]:
                 self.specifications[command] = arguments[1]
+        elif arguments and arguments[0] == "-r":
+            for command in arguments[1:]:
+                self.specifications.pop(command, None)
         else:
-            raise ValueError("complete: expected -C or -p")
+            raise ValueError("complete: expected -C, -p, or -r")
 
     def candidates(self, command, text, previous="", *, line="", point=0):
         """Wait for the completer and interpret stdout as candidate lines."""

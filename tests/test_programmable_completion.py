@@ -126,3 +126,17 @@ class ProgrammableCompletionTests(unittest.TestCase):
                 self.assertNotIn(b'\x07', output)
                 self.expect(exchange, b'kout ', b'c\t')
                 self.assertIn(b'checkout next\r\n', exchange(b'next\r'))
+
+    def test_unregister_is_idempotent_and_restores_filename_completion(self):
+        result = self.shell('complete -C /tmp/script echo\ncomplete -r echo\ncomplete -r echo\ncomplete -p echo\nexit\n')
+        self.assertEqual(result.stderr, 'complete: echo: no completion specification\n')
+        with tempfile.TemporaryDirectory() as folder:
+            script = self.make_script(folder, "print('run')")
+            Path(folder, 'local.txt').write_text('')
+            with interactive_shell(folder) as exchange:
+                exchange()
+                exchange(f'complete -C {script} echo\r'.encode())
+                exchange(b'complete -r echo\r')
+                self.expect(exchange, b'local.txt ', b'echo loc\t')
+                exchange(b'\r')
+                self.expect(exchange, b'\x07', b'echo xyz\t')
