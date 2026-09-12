@@ -18,3 +18,7 @@ class VariableTests(unittest.TestCase):
         result = self.shell('type declare\nexit\n')
         self.assertIn('declare is a shell builtin\n', result.stdout)
         self.assertEqual(result.stderr, '')
+
+    def test_missing_variable_reports_error(self):
+        result = self.shell('declare -p missing\nexit\n')
+        self.assertEqual(result.stderr, 'declare: missing: not found\n')
