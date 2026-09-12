@@ -28,7 +28,7 @@ class CompletionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder, chdir(folder):
             Path('readme.txt').write_text('file contents')
             Path('readme.txt').chmod(0o644)
-            Path('read_directory').mkdir()
+            Path('other_directory').mkdir()
             with patch('app.completion.readline.get_begidx', return_value=4):
                 for line in ('cat re', 'xyz re'):
                     with patch('app.completion.readline.get_line_buffer', return_value=line):

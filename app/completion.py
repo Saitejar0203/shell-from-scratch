@@ -2,6 +2,7 @@
 
 import os
 import readline
+import sys
 
 from app.commands import BUILTINS
 
@@ -27,28 +28,53 @@ def matching_commands(prefix):
     return sorted(names)
 
 
-def matching_files(prefix):
-    """Find file arguments in the current directory; executability is irrelevant."""
+def matching_paths(text):
+    """Complete the last path component while preserving the typed directory."""
+    directory, separator, prefix = text.rpartition("/")
+    typed_directory = directory + separator
+    search_directory = typed_directory or "."
+    matches = []
     try:
-        with os.scandir(".") as entries:
-            return sorted(entry.name for entry in entries
-                          if entry.name.startswith(prefix) and entry.is_file())
+        with os.scandir(search_directory) as entries:
+            for entry in entries:
+                if not entry.name.startswith(prefix):
+                    continue
+                candidate = typed_directory + entry.name
+                if entry.is_dir():
+                    matches.append(candidate + "/")
+                elif entry.is_file():
+                    matches.append(candidate + " ")
     except OSError:
         return []
+    return sorted(matches)
+
+
+def completion_candidates(text):
+    """Choose command lookup for the first word, path lookup for any argument."""
+    before_word = readline.get_line_buffer()[:readline.get_begidx()]
+    if before_word.strip():
+        return matching_paths(text)
+    return [name + " " for name in matching_commands(text)]
 
 
 def complete_command(text, state):
-    """Snapshot matches on state 0, then return one candidate per call."""
+    """Snapshot replacements once per Tab attempt, then enumerate them."""
     global _matches
-    before_word = readline.get_line_buffer()[:readline.get_begidx()]
     if state == 0:
-        if before_word.strip():
-            _matches = matching_files(text)
-        else:
-            _matches = matching_commands(text)
+        _matches = completion_candidates(text)
+        # libedit can omit the no-match bell after a preceding completion.
+        if not _matches and using_libedit():
+            sys.stdout.write("\a")
+            sys.stdout.flush()
     if state < len(_matches):
-        return _matches[state] + " "
+        return _matches[state]
     return None
+
+
+def using_libedit():
+    """Python may expose GNU Readline or its macOS libedit compatibility API."""
+    return (getattr(readline, "backend", "") == "editline"
+            or "libedit" in (readline.__doc__ or ""))
 
 
 def configure_completion():
@@ -56,9 +82,7 @@ def configure_completion():
     readline.set_completer_delims(" \t\n")
     readline.set_completer(complete_command)
 
-    backend = getattr(readline, "backend", "")
-    uses_libedit = backend == "editline" or "libedit" in (readline.__doc__ or "")
-    if uses_libedit:
+    if using_libedit():
         readline.parse_and_bind("bind ^I rl_complete")
     else:
         readline.parse_and_bind("tab: complete")

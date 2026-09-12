@@ -63,10 +63,10 @@ a unique completion leaves the cursor ready for arguments.
 
 Text before the current word determines the search. With only whitespace before
 it, `ech<Tab>` completes a command. Otherwise, `cat re<Tab>` searches filenames
-in the current working directory using `matching_files(text)`. Files need not
+in the current working directory using `matching_paths(text)`. Files need not
 be executable. Even `xyz re<Tab>` can complete to `xyz readme.txt `; an unknown
-command is reported only on Enter, during execution. Directory entries that
-are not files are skipped in this stage.
+command is reported only on Enter, during execution. Directories are offered with a trailing slash and no space. Each argument
+uses its own path; an earlier directory argument does not change cwd.
 The delimiter setting is whitespace; it is not our quote-aware shell parser.
 
 ## Finding partial executable names
@@ -92,16 +92,41 @@ that list rather than rescanning every directory. A later Tab attempt rescans,
 so changes to PATH or its files can be reflected. Completion is a suggestion:
 a file can disappear or lose permission before execution.
 
+## Completing paths in any argument
+
+`completion_candidates(text)` selects the search; `complete_command` only
+caches and enumerates its replacements. `matching_paths(text)` splits at the
+last slash and scans that directory, preserving the path the user typed:
+
+| Input fragment | Directory searched | Name prefix | Example replacement |
+| --- | --- | --- | --- |
+| `re` | `.` | `re` | `readme.txt ` |
+| `path/to/f` | `path/to/` | `f` | `path/to/file.txt ` |
+| `./proj` | `./` | `proj` | `./project/` |
+| `/tmp/data/` | `/tmp/data/` | empty | `/tmp/data/report.txt ` |
+
+Files end in a space; directories end in `/`. Readline uses the full candidate
+set for common prefixes and displays alternatives on repeated Tab presses.
+With `xyz_foo/` and `xyz_foo_bar/`, their shared prefix stops at `xyz_foo`, so no
+slash is inserted until the match is unique. Missing/unreadable directories
+produce no candidates. A no-match attempt preserves the line and rings a bell.
+
+In `ls bar/ f<Tab>`, `f` searches cwd, not `bar/`. The same selection works for
+second, third, and later arguments, including after unknown command names.
+
 ## Portability and tests
 
 Python's `readline` module can wrap GNU Readline or macOS libedit. We detect the
 backend and use `tab: complete` for GNU Readline or `bind ^I rl_complete` for
-libedit. Setup happens only when stdin and stdout are terminals.
+libedit. Setup happens only when stdin and stdout are terminals. A small
+libedit compatibility branch emits a no-match bell explicitly, because that
+backend can omit it after a preceding completion. GNU Readline supplies its
+own bell.
 
 Tests cover candidate filtering, duplicates, refreshed snapshots, argument
-position, and actual Tab input and command execution through a PTY. They do
-not establish full Bash behavior. Nested paths, directory completion, escaping
-special characters in suggested names, and configurable usage ranking are
+position, nested paths, directory suffixes, missing matches, repeated-Tab
+listings, progressive common prefixes, and actual execution through a PTY. They do
+not establish full Bash behavior. Escaping special characters in suggested names and configurable usage ranking are
 outside this implementation.
 
 ## References
