@@ -38,10 +38,10 @@ def parse_command(command):
             quote = character
             argument_started = True
             argument_quoted = True
-        elif character == "&":
+        elif character in "&|":
             if argument_started:
                 tokens.append(("word", "".join(current), argument_quoted))
-            tokens.append(("background", "&", False))
+            tokens.append(("background" if character == "&" else "pipe", character, False))
             current = []
             argument_started = False
             argument_quoted = False
@@ -113,3 +113,18 @@ def extract_background(tokens):
     if background and not tokens:
         raise ValueError("expected command before &")
     return tokens, background
+
+
+def split_pipeline(tokens):
+    """Split on operator tokens, never quoted or escaped pipe characters."""
+    stages = [[]]
+    for token in tokens:
+        if token[0] == "pipe":
+            if not stages[-1]:
+                raise ValueError("expected command before pipe")
+            stages.append([])
+        else:
+            stages[-1].append(token)
+    if len(stages) > 1 and not stages[-1]:
+        raise ValueError("expected command after pipe")
+    return stages
