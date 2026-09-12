@@ -7,6 +7,7 @@ The goal is to understand what happens between typing a command and seeing its r
 ## Features
 
 - An interactive command loop with a `$ ` prompt.
+- Tab completion for builtin command names, with a trailing space after a unique match.
 - Builtins: `echo`, `exit`, `pwd`, `cd`, and `type`.
 - Executable discovery through `PATH` and external program execution.
 - Directory navigation using absolute paths, relative paths, and `cd ~` through `HOME`.
@@ -47,6 +48,7 @@ Start with [`app/main.py`](app/main.py), then follow the functions it calls:
 | Module | Responsibility |
 | --- | --- |
 | [`app/main.py`](app/main.py) | Prompt, read input, coordinate each command, and report errors. |
+| [`app/completion.py`](app/completion.py) | Configure Readline and offer builtin command completions. |
 | [`app/parser.py`](app/parser.py) | Recognize words, quotes, escapes, and redirection operators; separate arguments from redirections. |
 | [`app/redirection.py`](app/redirection.py) | Open output files, temporarily redirect descriptors, then restore and close them. |
 | [`app/commands.py`](app/commands.py) | Handle builtins, search `PATH`, and launch external programs. |

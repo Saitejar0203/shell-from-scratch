@@ -3,6 +3,7 @@
 import sys
 
 from app.commands import execute_command
+from app.completion import configure_completion
 from app.parser import extract_redirections, parse_command
 from app.redirection import redirect_streams
 
@@ -14,9 +15,10 @@ def report_os_error(error):
 
 def main():
     """Read, parse, redirect, execute, and repeat until exit."""
+    if sys.stdin.isatty() and sys.stdout.isatty():
+        configure_completion()
     while True:
-        sys.stdout.write("$ ")
-        command = input()
+        command = input("$ ")
         try:
             tokens = parse_command(command)
             command_parts, quoted_arguments, destinations = extract_redirections(tokens)
