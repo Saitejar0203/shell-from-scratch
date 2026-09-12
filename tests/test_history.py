@@ -97,3 +97,13 @@ class HistoryTests(unittest.TestCase):
             eof_file = Path(folder, 'eof')
             self.shell('echo eof\n', folder, HISTFILE=str(eof_file))
             self.assertEqual(eof_file.read_text(), 'echo eof\n')
+
+    def test_exit_preserves_prior_history_without_duplicate_appends(self):
+        with tempfile.TemporaryDirectory() as folder:
+            saved = Path(folder, 'saved')
+            saved.write_text('echo old\n')
+            self.shell('echo new\nhistory -a saved\nexit\n', folder, HISTFILE=str(saved))
+            self.assertEqual(saved.read_text(), 'echo old\necho new\nhistory -a saved\nexit\n')
+            self.shell('echo next session\nexit\n', folder, HISTFILE=str(saved))
+            self.assertEqual(saved.read_text(),
+                             'echo old\necho new\nhistory -a saved\nexit\necho next session\nexit\n')

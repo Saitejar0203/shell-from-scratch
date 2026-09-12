@@ -21,7 +21,7 @@ class History:
 
     def save(self):
         if self.path:
-            self.write(self.path)
+            self.append(self.path)
 
     def record(self, line):
         if line.strip():
