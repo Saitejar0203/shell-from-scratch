@@ -10,6 +10,8 @@ BUILTINS = {"echo", "exit", "pwd", "type", "cd", "jobs", "history", "declare"}
 
 def find_executable(command_name):
     """Return the first executable file found in PATH, or None."""
+    if "/" in command_name:
+        return command_name if os.path.isfile(command_name) and os.access(command_name, os.X_OK) else None
     path_directories = os.environ.get("PATH", "").split(os.pathsep)
 
     for directory in path_directories:

@@ -46,3 +46,12 @@ class VariableTests(unittest.TestCase):
         result = self.shell("declare one=first two=second\nprintf '<%s>\\n' $one $two\nexit\n")
         self.assertIn('<first>\n<second>\n', result.stdout)
         self.assertEqual(result.stderr, '')
+
+    def test_braces_delimit_names_and_work_with_relative_executables(self):
+        with tempfile.TemporaryDirectory() as folder:
+            program = Path(folder, 'showargs')
+            program.write_text('#!/bin/sh\nprintf "<%s>\\n" "$@"\n')
+            program.chmod(0o755)
+            result = self.shell('declare Item=widget Foo1=Bar2\n./showargs stock_${Item}_id ${Foo1}and${Item}\nexit\n', folder)
+            self.assertIn('<stock_widget_id>\n<Bar2andwidget>\n', result.stdout)
+            self.assertEqual(result.stderr, '')
