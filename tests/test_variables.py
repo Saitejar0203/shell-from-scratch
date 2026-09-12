@@ -28,3 +28,10 @@ class VariableTests(unittest.TestCase):
         self.assertIn('declare -- foo="bar"\n', result.stdout)
         self.assertIn('declare -- foo="a=b"\n', result.stdout)
         self.assertEqual(result.stderr, '')
+
+    def test_invalid_names_are_not_stored(self):
+        result = self.shell('declare 23=x bad-name=y _FOO=bar\ndeclare -p 23 _FOO\nexit\n')
+        self.assertIn("declare: `23=x': not a valid identifier\n", result.stderr)
+        self.assertIn("declare: `bad-name=y': not a valid identifier\n", result.stderr)
+        self.assertIn('declare: 23: not found\n', result.stderr)
+        self.assertIn('declare -- _FOO="bar"\n', result.stdout)

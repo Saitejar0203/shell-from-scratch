@@ -1,4 +1,5 @@
 """Shell-local variables and the declare builtin."""
+import re
 import sys
 
 
@@ -20,6 +21,9 @@ class Variables:
             return
         for assignment in arguments:
             name, separator, value = assignment.partition("=")
+            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+                print(f"declare: `{assignment}': not a valid identifier", file=sys.stderr)
+                continue
             if separator:
                 self.values[name] = value
             else:
