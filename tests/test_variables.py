@@ -22,3 +22,9 @@ class VariableTests(unittest.TestCase):
     def test_missing_variable_reports_error(self):
         result = self.shell('declare -p missing\nexit\n')
         self.assertEqual(result.stderr, 'declare: missing: not found\n')
+
+    def test_declare_stores_updates_and_preserves_equals(self):
+        result = self.shell('declare foo=bar\ndeclare -p foo\ndeclare foo=a=b\ndeclare -p foo\nexit\n')
+        self.assertIn('declare -- foo="bar"\n', result.stdout)
+        self.assertIn('declare -- foo="a=b"\n', result.stdout)
+        self.assertEqual(result.stderr, '')

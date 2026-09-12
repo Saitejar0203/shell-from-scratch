@@ -9,4 +9,18 @@ class Variables:
     def declare(self, arguments):
         if arguments and arguments[0] == "-p":
             for name in arguments[1:]:
-                print(f"declare: {name}: not found", file=sys.stderr)
+                if name in self.values:
+                    value = self.values[name]
+                    # Print reusable double-quoted shell text.
+                    for character in ('\\', '"', '$', '`'):
+                        value = value.replace(character, '\\' + character)
+                    print(f'declare -- {name}="{value}"')
+                else:
+                    print(f"declare: {name}: not found", file=sys.stderr)
+            return
+        for assignment in arguments:
+            name, separator, value = assignment.partition("=")
+            if separator:
+                self.values[name] = value
+            else:
+                self.values.setdefault(name, "")
