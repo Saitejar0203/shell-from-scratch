@@ -55,7 +55,7 @@ def describe_command(command_parts):
             print(f"{command_name}: not found")
 
 
-def execute_command(command_parts, quoted_arguments, jobs):
+def execute_command(command_parts, quoted_arguments, jobs, history=None):
     """Run a builtin or external program; return True only for an exit request."""
     if not command_parts:
         return False
@@ -69,7 +69,8 @@ def execute_command(command_parts, quoted_arguments, jobs):
     elif command_name == "echo":
         print(" ".join(command_parts[1:]))
     elif command_name == "history":
-        pass
+        if history is not None:
+            history.run(command_parts[1:])
     elif command_name == "jobs":
         list_jobs(jobs)
     elif command_name == "type":

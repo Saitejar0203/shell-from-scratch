@@ -5,6 +5,7 @@ import sys
 from app.commands import execute_command, list_jobs, start_background_job
 from app.completion import configure_completion
 from app.parser import extract_background, extract_redirections, parse_command, split_pipeline
+from app.history import History
 from app.pipeline import execute_pipeline
 from app.redirection import redirect_streams
 
@@ -19,16 +20,21 @@ def main():
     if sys.stdin.isatty() and sys.stdout.isatty():
         configure_completion()
     jobs = {}
+    history = History()
     while True:
         list_jobs(jobs, completed_only=True)
-        command = input("$ ")
+        try:
+            command = input("$ ")
+        except EOFError:
+            break
+        history.record(command)
         try:
             tokens, background = extract_background(parse_command(command))
             stages = split_pipeline(tokens)
             if len(stages) > 1:
                 if background:
                     raise ValueError("background pipelines are not supported")
-                execute_pipeline(stages, jobs)
+                execute_pipeline(stages, jobs, history)
                 continue
             started_job = None
             should_exit = False
@@ -40,7 +46,7 @@ def main():
                     if background:
                         started_job = start_background_job(command_parts, jobs, command)
                     else:
-                        should_exit = execute_command(command_parts, quoted_arguments, jobs)
+                        should_exit = execute_command(command_parts, quoted_arguments, jobs, history)
                 except OSError as error:
                     report_os_error(error)
                     should_exit = False

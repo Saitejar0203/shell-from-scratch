@@ -9,7 +9,7 @@ from app.parser import extract_redirections
 from app.redirection import redirect_streams
 
 
-def execute_pipeline(stages, jobs):
+def execute_pipeline(stages, jobs, history=None):
     # Validate all syntax before starting children or opening output files.
     commands = [extract_redirections(stage) for stage in stages]
     if any(not arguments for arguments, _, _ in commands):
@@ -37,7 +37,7 @@ def execute_pipeline(stages, jobs):
                     with redirect_streams(destinations) as ready:
                         if ready:
                             if arguments[0] in BUILTINS:
-                                execute_command(arguments, quoted, jobs)
+                                execute_command(arguments, quoted, jobs, history)
                                 status = 0
                                 sys.stdout.flush()
                                 sys.stderr.flush()
