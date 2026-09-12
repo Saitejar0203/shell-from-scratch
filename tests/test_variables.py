@@ -55,3 +55,13 @@ class VariableTests(unittest.TestCase):
             result = self.shell('declare Item=widget Foo1=Bar2\n./showargs stock_${Item}_id ${Foo1}and${Item}\nexit\n', folder)
             self.assertIn('<stock_widget_id>\n<Bar2andwidget>\n', result.stdout)
             self.assertEqual(result.stderr, '')
+
+    def test_unset_words_disappear_but_quoted_empty_arguments_remain(self):
+        result = self.shell("declare existing=value\nprintf '<%s>\\n' ${missing1}end ${existing} ${missing2} \"$missing3\"\nexit\n")
+        self.assertIn('<end>\n<value>\n<>\n', result.stdout)
+        self.assertEqual(result.stderr, '')
+
+    def test_pipeline_builtins_inherit_variables_without_mutating_parent(self):
+        result = self.shell('declare name=parent\ndeclare name=child | cat\ndeclare -p name | cat\nexit\n')
+        self.assertIn('declare -- name="parent"\n', result.stdout)
+        self.assertEqual(result.stderr, '')

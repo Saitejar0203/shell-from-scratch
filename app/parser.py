@@ -26,7 +26,7 @@ def parse_command(command, variables=None):
                     next(characters)
                 # Expanded text is data, never parsed again as operators or quotes.
                 current.append(value)
-                argument_started = True
+                argument_started = argument_started or bool(value)
                 continue
         if quote is not None:
             if character == quote:

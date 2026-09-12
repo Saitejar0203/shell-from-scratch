@@ -35,4 +35,4 @@ def expansion_at(command, index, values):
     match = re.match(r"\$(?:([A-Za-z_][A-Za-z0-9_]*)|\{([A-Za-z_][A-Za-z0-9_]*)\})", command[index:])
     if match is None:
         return None
-    return values.get(match[1] or match[2], match[0]), len(match[0])
+    return values.get(match[1] or match[2], ""), len(match[0])
