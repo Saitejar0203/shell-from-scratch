@@ -6,6 +6,8 @@ import sys
 import tempfile
 import unittest
 
+from test_path_completion import interactive_shell
+
 ROOT = str(Path(__file__).resolve().parents[1])
 
 class HistoryTests(unittest.TestCase):
@@ -25,3 +27,13 @@ class HistoryTests(unittest.TestCase):
             self.assertIn('    2  echo second\n    3  history 2\n', result.stdout)
             self.assertNotIn('    1  echo first', result.stdout)
             self.assertNotIn('    4  history 0', result.stdout)
+
+    def test_up_arrow_recalls_older_commands(self):
+        with tempfile.TemporaryDirectory() as folder, interactive_shell(folder) as exchange:
+            exchange()
+            exchange(b'echo first\r')
+            exchange(b'echo second\r')
+            self.assertIn(b'echo second', exchange(b'\x1b[A'))
+            # Readline redraws only the changed suffix on some terminals.
+            exchange(b'\x1b[A')
+            self.assertIn(b'first\r\n', exchange(b'\r'))
