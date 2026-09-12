@@ -22,13 +22,13 @@ def parse_command(command):
     argument_started = False
     argument_quoted = False
 
-    characters = iter(command)
-    for character in characters:
+    characters = iter(enumerate(command))
+    for index, character in characters:
         if quote is not None:
             if character == quote:
                 quote = None
             elif quote == '"' and character == "\\":
-                escaped = next(characters, None)
+                _, escaped = next(characters, (None, None))
                 if escaped is None:
                     raise ValueError("unmatched quote")
                 if escaped not in '\\"$`':
@@ -37,7 +37,7 @@ def parse_command(command):
             else:
                 current.append(character)
         elif character == "\\":
-            escaped = next(characters, None)
+            _, escaped = next(characters, (None, None))
             if escaped is None:
                 raise ValueError("trailing backslash")
             current.append(escaped)
@@ -56,7 +56,11 @@ def parse_command(command):
                 descriptor = int(word)
             elif argument_started:
                 arguments.append(("word", word, argument_quoted))
-            arguments.append(("redirect", descriptor, False))
+            mode = "w"
+            if index + 1 < len(command) and command[index + 1] == ">":
+                next(characters)
+                mode = "a"
+            arguments.append(("redirect", (descriptor, mode), False))
             current = []
             argument_started = False
             argument_quoted = False
@@ -87,10 +91,12 @@ def extract_redirections(tokens):
     while index < len(tokens):
         kind, value, quoted = tokens[index]
         if kind == "redirect":
+            descriptor, mode = value
+            operator = ">>" if mode == "a" else ">"
             index += 1
             if index == len(tokens) or tokens[index][0] != "word":
-                raise ValueError(f"expected filename after {value}>")
-            destinations.append((value, tokens[index][1]))
+                raise ValueError(f"expected filename after {descriptor}{operator}")
+            destinations.append((descriptor, tokens[index][1], mode))
         else:
             arguments.append(value)
             quoted_arguments.append(quoted)
@@ -113,7 +119,7 @@ def redirect_streams(destinations):
     streams = {1: sys.stdout, 2: sys.stderr}
     saved_descriptors = set()
     with ExitStack() as cleanup:
-        for descriptor, path in destinations:
+        for descriptor, path, mode in destinations:
             stream = streams[descriptor]
             stream.flush()
             if descriptor not in saved_descriptors:
@@ -121,7 +127,7 @@ def redirect_streams(destinations):
                 cleanup.callback(restore_stream, descriptor, saved, stream)
                 saved_descriptors.add(descriptor)
             try:
-                with open(path, "w") as output_file:
+                with open(path, mode) as output_file:
                     os.dup2(output_file.fileno(), descriptor)
             except OSError as error:
                 print(f"shell: {path}: {error.strerror}", file=sys.stderr)

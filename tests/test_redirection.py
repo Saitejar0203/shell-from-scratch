@@ -123,6 +123,52 @@ echo "2">quoted-number''')
         self.assertIn('expected filename after 2>', result.stderr)
         self.assertEqual(result.stdout, '$ $ after\n$ ')
 
+    def test_append_stdout_creates_preserves_and_overwrites(self):
+        result = self.run_shell('echo first>>out\necho second 1>>out\ncat out\necho replacement >out\necho last >>out\necho visible')
+        self.assertEqual((self.directory / 'out').read_text(), 'replacement\nlast\n')
+        self.assertEqual(result.stdout, '$ $ $ first\nsecond\n$ $ $ visible\n$ ')
+        self.assertEqual(result.stderr, '')
+
+    def test_append_stderr_and_stdout_are_independent(self):
+        (self.directory / 'errors').write_text('existing\n')
+        (self.directory / 'source').write_text('data\n')
+        result = self.run_shell('cat source missing 2>>errors\ncd absent 2>>errors\necho visible 2>>empty\ncd other')
+        errors = (self.directory / 'errors').read_text()
+        self.assertTrue(errors.startswith('existing\n'))
+        self.assertIn('missing', errors)
+        self.assertTrue(errors.endswith('cd: absent: No such file or directory\n'))
+        self.assertEqual((self.directory / 'empty').read_text(), '')
+        self.assertEqual(result.stdout, '$ data\n$ $ visible\n$ $ ')
+        self.assertEqual(result.stderr, 'cd: other: No such file or directory\n')
+
+    def test_append_external_output_and_error_together(self):
+        (self.directory / 'source').write_text('data\n')
+        result = self.run_shell('cat source missing >>out 2>>errors\ncat source missing >>out 2>>errors')
+        self.assertEqual((self.directory / 'out').read_text(), 'data\ndata\n')
+        self.assertEqual((self.directory / 'errors').read_text().count('missing'), 2)
+        self.assertEqual(result.stderr, '')
+        self.assertEqual(result.stdout, '$ $ $ ')
+
+    def test_append_quoted_operators_and_missing_destination(self):
+        result = self.run_shell(r'''echo '>>' \>\> '2>>' >>'file name'
+echo skipped >>
+echo skipped 2>>
+echo skipped >>>out
+echo after''')
+        self.assertEqual((self.directory / 'file name').read_text(), '>> >> 2>>\n')
+        self.assertEqual(result.stderr.count('expected filename'), 3)
+        self.assertFalse((self.directory / 'out').exists())
+        self.assertEqual(result.stdout, '$ $ $ $ $ after\n$ ')
+
+    def test_append_failure_preserves_file_and_restores_streams(self):
+        (self.directory / 'errors').write_text('existing\n')
+        result = self.run_shell('echo skipped 2>>errors >>absent/out\necho after\ncd missing')
+        errors = (self.directory / 'errors').read_text()
+        self.assertTrue(errors.startswith('existing\n'))
+        self.assertIn('absent/out', errors)
+        self.assertEqual(result.stdout, '$ $ after\n$ $ ')
+        self.assertEqual(result.stderr, 'cd: missing: No such file or directory\n')
+
 
 if __name__ == '__main__':
     unittest.main()
