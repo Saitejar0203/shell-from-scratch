@@ -9,7 +9,11 @@ The goal is to understand what happens between typing a command and seeing its r
 - An interactive command loop with a `$ ` prompt.
 - Tab completion for builtin and executable command names in `PATH`, with a trailing space after a unique match.
 - Filename completion in any argument: nested paths, directory slashes, shared prefixes, sorted alternatives, and bells for missing matches.
-- Builtins: `echo`, `exit`, `pwd`, `cd`, `type`, and `jobs`.
+- Builtins: `echo`, `exit`, `pwd`, `cd`, `type`, `jobs`, `history`, `declare`, and `complete`.
+- Pipelines connecting any number of external commands or builtins.
+- In-memory history with arrow navigation, numbered listing, and HISTFILE persistence.
+- Shell variables declared with `declare`, expanded with `$NAME` and `${NAME}`.
+- Programmable completion scripts registered with `complete -C`, inspected with `-p`, and removed with `-r`.
 - Background external commands using a trailing `&`, with sequential job numbers and OS process IDs.
 - Executable discovery through `PATH` and external program execution.
 - Directory navigation using absolute paths, relative paths, and `cd ~` through `HOME`.
@@ -50,16 +54,23 @@ Start with [`app/main.py`](app/main.py), then follow the functions it calls:
 | Module | Responsibility |
 | --- | --- |
 | [`app/main.py`](app/main.py) | Prompt, read input, coordinate each command, and report errors. |
-| [`app/completion.py`](app/completion.py) | Configure Readline and offer command and filename completions. |
-| [`app/parser.py`](app/parser.py) | Recognize words, quotes, escapes, and redirection operators; separate arguments from redirections. |
+| [`app/completion.py`](app/completion.py) | Configure Readline and choose command, filename, or programmable candidates. |
+| [`app/programmable.py`](app/programmable.py) | Store completion scripts and run them with argument/cursor context. |
+| [`app/pipeline.py`](app/pipeline.py) | Fork concurrent stages, wire pipes, close unused ends, and wait. |
+| [`app/history.py`](app/history.py) | Manage Readline history, file loading, and session append tracking. |
+| [`app/variables.py`](app/variables.py) | Store shell variables, validate names, and resolve expansion syntax. |
+| [`app/state.py`](app/state.py) | Group the state owned by one shell process. |
+| [`app/parser.py`](app/parser.py) | Recognize words, quotes, expansions, escapes, and pipeline/redirection operators; separate arguments from redirections. |
 | [`app/redirection.py`](app/redirection.py) | Open output files, temporarily redirect descriptors, then restore and close them. |
 | [`app/commands.py`](app/commands.py) | Handle builtins, search `PATH`, and launch external programs. |
 
 Each command follows this path:
 
 ```text
-input → parse_command → extract_redirections
-      → redirect_streams → execute_command → restore streams → next prompt
+input → record history → parse words/operators/expansions
+      → single command: redirect → execute → restore
+      → pipeline: wire pipes → launch all children → wait
+      → report completed background jobs → next prompt
 ```
 
 The parser only processes text. File-descriptor changes belong to `redirection.py`, and command behavior belongs to `commands.py`.
@@ -88,4 +99,4 @@ The tests launch the shell as a separate process and check file contents, output
 
 ## Project status
 
-This is an evolving learning project, not a complete POSIX shell. Pipelines, full job control, history, and variable expansion are not implemented yet. Background launch is supported; jobs are listed in launch order with current/previous markers; completion notifications and explicit reaping are upcoming. Multiline input and full interactive signal handling are also outside the current implementation.
+All currently available CodeCrafters shell exercises are implemented. This remains a learning shell rather than a complete POSIX shell. Background pipelines/builtins, full interactive signal job control, multiline input, arbitrary shell expansion, and concurrent history merging are outside the exercise scope. Background jobs support listing, completion notifications, reaping, and number recycling.

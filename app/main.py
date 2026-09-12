@@ -5,9 +5,7 @@ import sys
 from app.commands import execute_command, list_jobs, start_background_job
 from app.completion import configure_completion
 from app.parser import extract_background, extract_redirections, parse_command, split_pipeline
-from app.history import History
-from app.variables import Variables
-from app.programmable import ProgrammableCompletions
+from app.state import ShellState
 from app.pipeline import execute_pipeline
 from app.redirection import redirect_streams
 
@@ -19,30 +17,27 @@ def report_os_error(error):
 
 def main():
     """Read, parse, redirect, execute, and repeat until exit."""
-    completions = ProgrammableCompletions()
+    state = ShellState()
     if sys.stdin.isatty() and sys.stdout.isatty():
-        configure_completion(completions)
-    jobs = {}
-    variables = Variables()
-    history = History()
+        configure_completion(state.completions)
     try:
-        history.load()
+        state.history.load()
     except OSError as error:
         report_os_error(error)
     while True:
-        list_jobs(jobs, completed_only=True)
+        list_jobs(state.jobs, completed_only=True)
         try:
             command = input("$ ")
         except EOFError:
             break
-        history.record(command)
+        state.history.record(command)
         try:
-            tokens, background = extract_background(parse_command(command, variables.values))
+            tokens, background = extract_background(parse_command(command, state.variables.values))
             stages = split_pipeline(tokens)
             if len(stages) > 1:
                 if background:
                     raise ValueError("background pipelines are not supported")
-                execute_pipeline(stages, jobs, history, variables, completions)
+                execute_pipeline(stages, state)
                 continue
             started_job = None
             should_exit = False
@@ -52,9 +47,9 @@ def main():
                     continue
                 try:
                     if background:
-                        started_job = start_background_job(command_parts, jobs, command)
+                        started_job = start_background_job(command_parts, state.jobs, command)
                     else:
-                        should_exit = execute_command(command_parts, quoted_arguments, jobs, history, variables, completions)
+                        should_exit = execute_command(command_parts, quoted_arguments, state)
                 except OSError as error:
                     report_os_error(error)
                     should_exit = False
@@ -69,7 +64,7 @@ def main():
             report_os_error(error)
 
     try:
-        history.save()
+        state.history.save()
     except OSError as error:
         report_os_error(error)
 
