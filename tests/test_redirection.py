@@ -1,0 +1,89 @@
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+
+
+SCRIPT = Path(__file__).resolve().parents[1] / 'app' / 'main.py'
+
+
+class RedirectionTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.directory = Path(self.temp.name)
+
+    def run_shell(self, commands):
+        return subprocess.run(
+            [sys.executable, str(SCRIPT)],
+            input=commands + '\nexit\n', text=True, capture_output=True,
+            cwd=self.directory, timeout=10,
+        )
+
+    def test_builtin_overwrite_and_restore(self):
+        (self.directory / 'out').write_text('old contents that must disappear')
+        result = self.run_shell('echo hello > out extra\necho world')
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual((self.directory / 'out').read_text(), 'hello extra\n')
+        self.assertEqual(result.stdout, '$ $ world\n$ ')
+        self.assertEqual(result.stderr, '')
+
+    def test_operators_without_spaces_and_numeric_arguments(self):
+        result = self.run_shell('echo one 1>first\necho two>second\necho 1 >third\necho "1">fourth')
+        for name, expected in [('first', 'one\n'), ('second', 'two\n'), ('third', '1\n'), ('fourth', '1\n')]:
+            self.assertEqual((self.directory / name).read_text(), expected)
+        self.assertEqual(result.stderr, '')
+
+    def test_quoted_operators_and_filenames(self):
+        result = self.run_shell(r'''echo '>' \> "1>" > 'file name'
+echo hello > '>'
+echo foo'>'bar > other''')
+        self.assertEqual((self.directory / 'file name').read_text(), '> > 1>\n')
+        self.assertEqual((self.directory / '>').read_text(), 'hello\n')
+        self.assertEqual((self.directory / 'other').read_text(), 'foo>bar\n')
+        self.assertEqual(result.stderr, '')
+
+    def test_external_stdout_and_stderr(self):
+        (self.directory / 'source').write_text('data\n')
+        result = self.run_shell('cat source missing 1>out\necho after')
+        self.assertEqual((self.directory / 'out').read_text(), 'data\n')
+        self.assertIn('missing', result.stderr)
+        self.assertEqual(result.stdout, '$ $ after\n$ ')
+
+    def test_syntax_errors_do_not_create_files(self):
+        result = self.run_shell('echo bad > out >\necho bad > > out\necho after')
+        self.assertFalse((self.directory / 'out').exists())
+        self.assertEqual(result.stderr.count('expected filename'), 2)
+        self.assertEqual(result.stdout, '$ $ $ after\n$ ')
+
+    def test_open_failure_restores_stdout_and_skips_command(self):
+        result = self.run_shell('echo bad > first > missing/out\necho after')
+        self.assertEqual((self.directory / 'first').read_text(), '')
+        self.assertIn('missing/out', result.stderr)
+        self.assertEqual(result.stdout, '$ $ after\n$ ')
+
+    def test_multiple_redirections_and_redirection_only(self):
+        result = self.run_shell('echo hello > first > second\n> empty')
+        self.assertEqual((self.directory / 'first').read_text(), '')
+        self.assertEqual((self.directory / 'second').read_text(), 'hello\n')
+        self.assertEqual((self.directory / 'empty').read_text(), '')
+        self.assertEqual(result.stderr, '')
+
+    def test_cd_stays_in_shell_process(self):
+        (self.directory / 'child').mkdir()
+        result = self.run_shell('cd child > out\npwd')
+        self.assertEqual((self.directory / 'out').read_text(), '')
+        self.assertIn(str((self.directory / 'child').resolve()), result.stdout)
+        self.assertEqual(result.stderr, '')
+
+    def test_repeated_redirections_and_redirected_exit(self):
+        result = self.run_shell(('echo ok > out\n' * 300) + 'exit > last')
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stderr, '')
+        self.assertEqual((self.directory / 'out').read_text(), 'ok\n')
+        self.assertEqual((self.directory / 'last').read_text(), '')
+
+
+if __name__ == '__main__':
+    unittest.main()
