@@ -1,4 +1,4 @@
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 import os 
 import subprocess
 import sys 
@@ -49,12 +49,14 @@ def parse_command(command):
             argument_quoted = True
         elif character == ">":
             word = "".join(current)
+            descriptor = 1
             if argument_started and not argument_quoted and word.isdecimal():
-                if word != "1":
-                    raise ValueError("only stdout redirection is supported")
+                if word not in ("1", "2"):
+                    raise ValueError("only stdout and stderr redirection are supported")
+                descriptor = int(word)
             elif argument_started:
                 arguments.append(("word", word, argument_quoted))
-            arguments.append(("redirect_stdout", ">", False))
+            arguments.append(("redirect", descriptor, False))
             current = []
             argument_started = False
             argument_quoted = False
@@ -84,11 +86,11 @@ def extract_redirections(tokens):
     index = 0
     while index < len(tokens):
         kind, value, quoted = tokens[index]
-        if kind == "redirect_stdout":
+        if kind == "redirect":
             index += 1
             if index == len(tokens) or tokens[index][0] != "word":
-                raise ValueError("expected filename after >")
-            destinations.append(tokens[index][1])
+                raise ValueError(f"expected filename after {value}>")
+            destinations.append((value, tokens[index][1]))
         else:
             arguments.append(value)
             quoted_arguments.append(quoted)
@@ -96,27 +98,36 @@ def extract_redirections(tokens):
     return arguments, quoted_arguments, destinations
 
 
-@contextmanager
-def redirect_stdout(destinations):
-    if not destinations:
-        yield
-        return
-
-    sys.stdout.flush()
-    saved_stdout = os.dup(1)
+def restore_stream(descriptor, saved_descriptor, stream):
     try:
-        for path in destinations:
-            with open(path, "w") as output_file:
-                os.dup2(output_file.fileno(), 1)
-        yield
+        stream.flush()
     finally:
         try:
-            sys.stdout.flush()
+            os.dup2(saved_descriptor, descriptor)
         finally:
+            os.close(saved_descriptor)
+
+
+@contextmanager
+def redirect_streams(destinations):
+    streams = {1: sys.stdout, 2: sys.stderr}
+    saved_descriptors = set()
+    with ExitStack() as cleanup:
+        for descriptor, path in destinations:
+            stream = streams[descriptor]
+            stream.flush()
+            if descriptor not in saved_descriptors:
+                saved = os.dup(descriptor)
+                cleanup.callback(restore_stream, descriptor, saved, stream)
+                saved_descriptors.add(descriptor)
             try:
-                os.dup2(saved_stdout, 1)
-            finally:
-                os.close(saved_stdout)
+                with open(path, "w") as output_file:
+                    os.dup2(output_file.fileno(), descriptor)
+            except OSError as error:
+                print(f"shell: {path}: {error.strerror}", file=sys.stderr)
+                yield False
+                return
+        yield True
 
 
 def execute_command(command_parts, quoted_arguments):
@@ -174,8 +185,15 @@ def main():
         try:
             tokens = parse_command(command)
             command_parts, quoted_arguments, destinations = extract_redirections(tokens)
-            with redirect_stdout(destinations):
-                should_exit = execute_command(command_parts, quoted_arguments)
+            with redirect_streams(destinations) as ready:
+                if not ready:
+                    continue
+                try:
+                    should_exit = execute_command(command_parts, quoted_arguments)
+                except OSError as error:
+                    location = f"{error.filename}: " if error.filename else ""
+                    print(f"shell: {location}{error.strerror}", file=sys.stderr)
+                    should_exit = False
             if should_exit:
                 break
         except ValueError as error:

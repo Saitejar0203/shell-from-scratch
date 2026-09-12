@@ -12,7 +12,7 @@ The goal is to understand what happens between typing a command and seeing its r
 - Directory navigation using absolute paths, relative paths, and `cd ~` through `HOME`.
 - Single and double quotes, adjacent quoted strings, and backslash escaping.
 - Quoted executable names and filenames containing spaces.
-- Standard-output redirection with `>` and `1>` for builtins and external programs.
+- Standard-output redirection with `>` and `1>`, and standard-error redirection with `2>` for builtins and external programs.
 - Error messages for invalid commands, failed directory changes, and unmatched quotes.
 
 ## Run locally
@@ -60,4 +60,4 @@ The implementation is in [`app/main.py`](app/main.py):
 
 ## Project status
 
-This is an evolving learning project, not a complete POSIX shell. Stderr redirection, appending output, pipelines, job control, history, and variable expansion are not implemented yet. Multiline input and full interactive signal handling are also outside the current implementation.
+This is an evolving learning project, not a complete POSIX shell. Appending output, pipelines, job control, history, and variable expansion are not implemented yet. Multiline input and full interactive signal handling are also outside the current implementation.

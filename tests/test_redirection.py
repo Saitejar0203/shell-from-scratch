@@ -84,6 +84,45 @@ echo foo'>'bar > other''')
         self.assertEqual((self.directory / 'out').read_text(), 'ok\n')
         self.assertEqual((self.directory / 'last').read_text(), '')
 
+    def test_stderr_redirect_preserves_stdout(self):
+        (self.directory / 'source').write_text('data\n')
+        result = self.run_shell('cat source missing 2>errors\necho hello 2>empty')
+        self.assertIn('missing', (self.directory / 'errors').read_text())
+        self.assertEqual((self.directory / 'empty').read_text(), '')
+        self.assertEqual(result.stdout, '$ data\n$ hello\n$ ')
+        self.assertEqual(result.stderr, '')
+
+    def test_builtin_stderr_overwrite_and_restore(self):
+        (self.directory / 'errors').write_text('old diagnostic')
+        result = self.run_shell('cd missing 2>errors\ncd other_missing')
+        self.assertEqual((self.directory / 'errors').read_text(),
+                         'cd: missing: No such file or directory\n')
+        self.assertEqual(result.stderr, 'cd: other_missing: No such file or directory\n')
+
+    def test_both_streams_and_partial_setup_failure(self):
+        (self.directory / 'source').write_text('data\n')
+        result = self.run_shell('cat source missing >out 2>errors\necho skipped 2>first >absent/out\necho after\ncd missing')
+        self.assertEqual((self.directory / 'out').read_text(), 'data\n')
+        self.assertIn('missing', (self.directory / 'errors').read_text())
+        self.assertEqual(result.stdout, '$ $ $ after\n$ $ ')
+        self.assertIn('absent/out', (self.directory / 'first').read_text())
+        self.assertNotIn('absent/out', result.stderr)
+        self.assertIn('cd: missing:', result.stderr)
+
+    def test_quoted_stderr_operator_and_separated_two(self):
+        result = self.run_shell(r'''echo '2>' 2\> >literal
+echo 2 >number
+echo "2">quoted-number''')
+        self.assertEqual((self.directory / 'literal').read_text(), '2> 2>\n')
+        self.assertEqual((self.directory / 'number').read_text(), '2\n')
+        self.assertEqual((self.directory / 'quoted-number').read_text(), '2\n')
+        self.assertEqual(result.stderr, '')
+
+    def test_missing_stderr_filename(self):
+        result = self.run_shell('echo skipped 2>\necho after')
+        self.assertIn('expected filename after 2>', result.stderr)
+        self.assertEqual(result.stdout, '$ $ after\n$ ')
+
 
 if __name__ == '__main__':
     unittest.main()
