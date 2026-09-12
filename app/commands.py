@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 
-BUILTINS = {"echo", "exit", "pwd", "type", "cd", "jobs", "history", "declare"}
+BUILTINS = {"echo", "exit", "pwd", "type", "cd", "jobs", "history", "declare", "complete"}
 
 
 def find_executable(command_name):
@@ -70,6 +70,8 @@ def execute_command(command_parts, quoted_arguments, jobs, history=None, variabl
         change_directory(command_parts, quoted_arguments)
     elif command_name == "echo":
         print(" ".join(command_parts[1:]))
+    elif command_name == "complete":
+        pass
     elif command_name == "declare":
         if variables is not None:
             variables.declare(command_parts[1:])
