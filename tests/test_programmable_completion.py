@@ -69,7 +69,7 @@ class ProgrammableCompletionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             script = self.make_script(folder,
                 "import sys\nif sys.argv[1:] == ['echo', 'set', 'remote']: print('set-url')\n"
-                "elif sys.argv[1:] == ['echo', '', '']: print('first')")
+                "elif sys.argv[1:] == ['echo', '', 'echo']: print('first')")
             with interactive_shell(folder) as exchange:
                 exchange()
                 exchange(f'complete -C {script} echo\r'.encode())
@@ -106,3 +106,12 @@ class ProgrammableCompletionTests(unittest.TestCase):
                 self.assertLess(output.index(b'add'), output.index(b'commit'))
                 self.assertLess(output.index(b'commit'), output.index(b'push'))
                 self.assertIn(b'$ echo ', output)
+
+    def test_first_argument_uses_command_as_previous_word(self):
+        with tempfile.TemporaryDirectory() as folder:
+            script = self.make_script(folder,
+                "import sys\nif sys.argv[1:] == ['echo', 're', 'echo']: print('reset')")
+            with interactive_shell(folder) as exchange:
+                exchange()
+                exchange(f'complete -C {script} echo\r'.encode())
+                self.expect(exchange, b'reset ', b'echo re\t')

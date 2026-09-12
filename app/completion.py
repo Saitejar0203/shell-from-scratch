@@ -61,7 +61,7 @@ def completion_candidates(text):
         except ValueError:
             words = before_word.split()
         if words and _programmable is not None and words[0] in _programmable.specifications:
-            previous = words[-1] if len(words) > 1 else ""
+            previous = words[-1] if words else ""
             point = len(line[:readline.get_endidx()].encode())
             return [name + " " for name in _programmable.candidates(
                 words[0], text, previous, line=line, point=point)]
