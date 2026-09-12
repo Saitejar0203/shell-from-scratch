@@ -2,7 +2,7 @@
 
 import sys
 
-from app.commands import execute_command, start_background_job
+from app.commands import execute_command, list_jobs, start_background_job
 from app.completion import configure_completion
 from app.parser import extract_background, extract_redirections, parse_command
 from app.redirection import redirect_streams
@@ -19,6 +19,7 @@ def main():
         configure_completion()
     jobs = {}
     while True:
+        list_jobs(jobs, completed_only=True)
         command = input("$ ")
         try:
             tokens, background = extract_background(parse_command(command))

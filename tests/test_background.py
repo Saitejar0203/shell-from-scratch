@@ -50,6 +50,27 @@ class BackgroundTests(unittest.TestCase):
             process.kill.assert_not_called()
             process.wait.assert_not_called()
 
+    def test_prompt_reaping_shows_only_completed_and_recycles_numbers(self):
+        running, finished = Mock(), Mock()
+        running.poll.return_value = None
+        finished.poll.return_value = 0
+        jobs = {1: {"process": running, "command": "sleep 30 &"},
+                2: {"process": finished, "command": "echo '&' &"}}
+        output = io.StringIO()
+        with redirect_stdout(output):
+            list_jobs(jobs, completed_only=True)
+        self.assertEqual(output.getvalue(), "[2]+  Done                    echo '&'\n")
+        with patch('app.commands.find_executable', return_value='/bin/sleep'), \
+                patch('app.commands.subprocess.Popen') as popen:
+            popen.return_value.pid = 123
+            self.assertEqual(start_background_job(['sleep', '30'], jobs, 'sleep 30 &')[0], 2)
+            popen.return_value.poll.return_value = 0
+            running.poll.return_value = 0
+            with redirect_stdout(io.StringIO()):
+                list_jobs(jobs, completed_only=True)
+            self.assertEqual(jobs, {})
+            self.assertEqual(start_background_job(['sleep', '30'], jobs, 'sleep 30 &')[0], 1)
+
     def test_new_job_does_not_overwrite_job_after_removal(self):
         existing = {"process": Mock(), "command": "sleep 30 &"}
         jobs = {1: existing, 3: existing}
@@ -125,6 +146,19 @@ class BackgroundTests(unittest.TestCase):
                 start = time.monotonic()
                 prompt('sleep 0.2')
                 self.assertGreaterEqual(time.monotonic() - start, 0.15)
+                self.assertRegex(prompt('sleep 0.1 &'), rb'^\[4\] \d+\n\$ ')
+                self.assertEqual(prompt('sleep 0.3'),
+                                 b'[4]+  Done                    sleep 0.1\n$ ')
+                self.assertNotIn(b'Done', prompt('jobs'))
+                # Reaping happens after redirect restoration, even on empty input.
+                self.assertRegex(prompt('sleep 0.1 &'), rb'^\[4\] \d+\n\$ ')
+                time.sleep(0.2)
+                self.assertEqual(prompt('echo done >notice.txt'),
+                                 b'[4]+  Done                    sleep 0.1\n$ ')
+                self.assertEqual(Path(folder, 'notice.txt').read_text(), 'done\n')
+                self.assertRegex(prompt('sleep 0.1 &'), rb'^\[4\] \d+\n\$ ')
+                time.sleep(0.2)
+                self.assertEqual(prompt(''), b'[4]+  Done                    sleep 0.1\n$ ')
             finally:
                 for pid in children:
                     try:
