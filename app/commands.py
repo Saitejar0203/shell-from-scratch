@@ -93,16 +93,25 @@ def start_background_job(arguments, jobs, command_text):
         print(f"{arguments[0]}: command not found", file=sys.stderr)
         return None
     process = subprocess.Popen(arguments, executable=executable)
-    job_number = len(jobs) + 1
+    job_number = max(jobs, default=0) + 1
     jobs[job_number] = {"process": process, "command": command_text.strip()}
     return job_number, process.pid
 
 
 def list_jobs(jobs):
-    """List launched jobs in number order; exit detection comes later."""
+    """Show each job once per call, then forget completed jobs."""
     numbers = sorted(jobs)
     newest = numbers[-1] if numbers else None
     previous = numbers[-2] if len(numbers) > 1 else None
     for number in numbers:
         marker = "+" if number == newest else "-" if number == previous else " "
-        print(f"[{number}]{marker}  {'Running':<24}{jobs[number]['command']}")
+        job = jobs[number]
+        # poll() also reaps an exited child; a running child never blocks here.
+        done = job["process"].poll() is not None
+        status = "Done" if done else "Running"
+        command = job["command"]
+        if done:
+            command = command.removesuffix("&").rstrip()
+        print(f"[{number}]{marker}  {status:<24}{command}")
+        if done:
+            del jobs[number]

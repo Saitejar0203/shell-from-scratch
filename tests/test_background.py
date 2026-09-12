@@ -1,6 +1,9 @@
 """Check background launch, literal ampersands, and foreground recovery."""
 
 import os
+import io
+from contextlib import redirect_stdout
+from unittest.mock import Mock, patch
 from pathlib import Path
 import re
 import select
@@ -11,10 +14,52 @@ import tempfile
 import time
 import unittest
 
+from app.commands import list_jobs, start_background_job
 from app.parser import extract_background, parse_command
 
 
 class BackgroundTests(unittest.TestCase):
+    def test_done_jobs_appear_once_and_markers_shift(self):
+        processes = [Mock(), Mock(), Mock()]
+        for process in processes:
+            process.poll.return_value = None
+        jobs = {
+            number: {"process": process, "command": f"sleep {number} &"}
+            for number, process in enumerate(processes, 1)
+        }
+
+        def listing():
+            output = io.StringIO()
+            with redirect_stdout(output):
+                list_jobs(jobs)
+            return output.getvalue()
+
+        # Both success (0) and nonzero normal exits count as completed.
+        processes[1].poll.return_value = 0
+        processes[2].poll.return_value = 7
+        self.assertEqual(listing(),
+                         "[1]   Running                 sleep 1 &\n"
+                         "[2]-  Done                    sleep 2\n"
+                         "[3]+  Done                    sleep 3\n")
+        self.assertEqual(list(jobs), [1])
+        self.assertEqual(listing(), "[1]+  Running                 sleep 1 &\n")
+        processes[0].poll.return_value = 0
+        self.assertEqual(listing(), "[1]+  Done                    sleep 1\n")
+        self.assertEqual(listing(), "")
+        for process in processes:
+            process.kill.assert_not_called()
+            process.wait.assert_not_called()
+
+    def test_new_job_does_not_overwrite_job_after_removal(self):
+        existing = {"process": Mock(), "command": "sleep 30 &"}
+        jobs = {1: existing, 3: existing}
+        with patch('app.commands.find_executable', return_value='/bin/sleep'), \
+                patch('app.commands.subprocess.Popen') as popen:
+            popen.return_value.pid = 123
+            self.assertEqual(start_background_job(['sleep', '30'], jobs, 'sleep 30 &'),
+                             (4, 123))
+        self.assertIs(jobs[3], existing)
+
     def test_only_unquoted_trailing_ampersand_starts_background(self):
         for line in ('sleep 30 &', 'sleep 30&'):
             tokens, background = extract_background(parse_command(line))
