@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 
-BUILTINS = {"echo", "exit", "pwd", "type", "cd", "jobs"}
+BUILTINS = {"echo", "exit", "pwd", "type", "cd", "jobs", "history"}
 
 
 def find_executable(command_name):
@@ -68,6 +68,8 @@ def execute_command(command_parts, quoted_arguments, jobs):
         change_directory(command_parts, quoted_arguments)
     elif command_name == "echo":
         print(" ".join(command_parts[1:]))
+    elif command_name == "history":
+        pass
     elif command_name == "jobs":
         list_jobs(jobs)
     elif command_name == "type":
