@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 from test_path_completion import interactive_shell
@@ -31,6 +32,14 @@ class ProgrammableCompletionTests(unittest.TestCase):
         self.assertIn("complete -C '/tmp/replacement' git\n", result.stdout)
         self.assertEqual(result.stderr, '')
 
+    def expect(self, exchange, expected, keys=b""):
+        output = exchange(keys)
+        deadline = time.monotonic() + 5
+        while expected not in output and time.monotonic() < deadline:
+            output += exchange()
+        self.assertIn(expected, output)
+        return output
+
     def make_script(self, folder, body):
         script = Path(folder, 'completer')
         script.write_text('#!' + sys.executable + '\n' + body + '\n')
@@ -43,5 +52,5 @@ class ProgrammableCompletionTests(unittest.TestCase):
             with interactive_shell(folder) as exchange:
                 exchange()
                 exchange(f'complete -C {script} echo\r'.encode())
-                self.assertIn(b'run ', exchange(b'echo \t'))
+                self.expect(exchange, b'run ', b'echo \t')
                 self.assertIn(b'run next\r\n', exchange(b'next\r'))
