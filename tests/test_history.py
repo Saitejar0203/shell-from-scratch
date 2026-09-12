@@ -65,3 +65,9 @@ class HistoryTests(unittest.TestCase):
             result = self.shell('history -r saved\nhistory\nexit\n', folder)
             self.assertIn('    1  history -r saved\n    2  echo loaded\n    3  history\n', result.stdout)
             self.assertEqual(result.stderr, '')
+
+    def test_write_creates_file_and_includes_write_command(self):
+        with tempfile.TemporaryDirectory() as folder:
+            result = self.shell('echo saved\nhistory -w saved\nexit\n', folder)
+            self.assertEqual(Path(folder, 'saved').read_text(), 'echo saved\nhistory -w saved\n')
+            self.assertEqual(result.stderr, '')

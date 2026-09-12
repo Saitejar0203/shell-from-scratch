@@ -21,11 +21,15 @@ class History:
             if line.strip():
                 readline.add_history(line)
 
+    def write(self, path):
+        Path(path).write_text("".join(line + "\n" for line in self.entries()))
+
     def run(self, arguments):
-        if arguments and arguments[0] == "-r":
+        if arguments and arguments[0] in ("-r", "-w"):
             if len(arguments) != 2:
-                raise ValueError("history: -r requires a path")
-            self.read(arguments[1])
+                raise ValueError(f"history: {arguments[0]} requires a path")
+            action = self.read if arguments[0] == "-r" else self.write
+            action(arguments[1])
             return
         entries = self.entries()
         start = 0
