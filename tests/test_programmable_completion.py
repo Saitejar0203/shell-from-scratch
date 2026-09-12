@@ -94,3 +94,15 @@ class ProgrammableCompletionTests(unittest.TestCase):
                 self.expect(exchange, b'd  end', b'echo ad end\x1b[D\x1b[D\x1b[D\x1b[D\t')
                 self.assertEqual(json.loads(Path(folder, 'context').read_text()), ['echo ad end', '7'])
             self.assertNotIn('COMP_LINE', os.environ)
+
+    def test_multiple_candidates_ring_then_list_in_sorted_order(self):
+        with tempfile.TemporaryDirectory() as folder:
+            script = self.make_script(folder, "print('push\\nadd\\ncommit')")
+            with interactive_shell(folder) as exchange:
+                exchange()
+                exchange(f'complete -C {script} echo\r'.encode())
+                self.expect(exchange, b'\x07', b'echo \t')
+                output = self.expect(exchange, b'commit', b'\t')
+                self.assertLess(output.index(b'add'), output.index(b'commit'))
+                self.assertLess(output.index(b'commit'), output.index(b'push'))
+                self.assertIn(b'$ echo ', output)
