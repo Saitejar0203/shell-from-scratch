@@ -41,6 +41,7 @@ int main(void) {
             putchar('\n');
         } else if (!strcmp(command, "cd")) {
             char *directory = strtok_r(NULL, " \t\r\n", &save);
+            if (directory && !strcmp(directory, "~")) directory = getenv("HOME");
             if (directory && chdir(directory) < 0)
                 fprintf(stderr, "cd: %s: %s\n", directory, strerror(errno));
         } else if (!strcmp(command, "pwd")) {
