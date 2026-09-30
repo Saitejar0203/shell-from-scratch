@@ -244,6 +244,14 @@ int completion_builtin(int argc, char **argv) {
         }
         return result;
     }
+    if (argc > 1 && !strcmp(argv[1], "-r")) {
+        for (int i = 2; i < argc; i++) {
+            Specification **link = &specifications;
+            while (*link && strcmp((*link)->command, argv[i])) link = &(*link)->next;
+            if (*link) { Specification *removed = *link; *link = removed->next; free(removed->command); free(removed->script); free(removed); }
+        }
+        return 0;
+    }
     fputs("complete: expected -C, -p, or -r\n", stderr); return 1;
 }
 void completion_cleanup(void) {
