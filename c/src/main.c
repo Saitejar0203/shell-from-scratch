@@ -86,6 +86,56 @@ static void restore(int saved[3]) {
     fflush(NULL);
     for (int fd=0; fd<3; fd++) if (saved[fd]>=0) { dup2(saved[fd],fd); close(saved[fd]); }
 }
+static void pipeline(Words args) {
+    size_t stages = 1;
+    for (size_t i=0; i<args.count; i++) if (args.operators[i] == 3) {
+        if (!i || i+1==args.count || args.operators[i-1]==3) {
+            fputs("shell: empty pipeline stage\n", stderr); return;
+        }
+        stages++;
+    }
+    pid_t *children = allocate(stages * sizeof(*children));
+    size_t started = 0, begin = 0;
+    int previous = -1;
+    fflush(NULL);
+    for (size_t stage=0; stage<stages; stage++) {
+        size_t end = begin;
+        while (end<args.count && args.operators[end]!=3) end++;
+        Words command = {allocate((end-begin+1)*sizeof(char*)), allocate(end-begin+1), end-begin};
+        memcpy(command.words,args.words+begin,command.count*sizeof(char*));
+        memcpy(command.operators,args.operators+begin,command.count);
+        command.words[command.count]=NULL;
+        int descriptors[2] = {-1,-1};
+        if (stage+1<stages && pipe(descriptors)<0) {
+            perror("pipe"); free(command.words); free(command.operators); break;
+        }
+        pid_t child=fork();
+        if (child==0) {
+            if (previous>=0) { if (dup2(previous,STDIN_FILENO)<0) _exit(1); close(previous); }
+            if (descriptors[1]>=0) {
+                close(descriptors[0]);
+                if (dup2(descriptors[1],STDOUT_FILENO)<0) _exit(1);
+                close(descriptors[1]);
+            }
+            int saved[3];
+            if (!redirect(&command,saved) || !command.count) _exit(1);
+            char *path=find_executable(command.words[0]);
+            if (path) execv(path,command.words);
+            fprintf(stderr,"%s: command not found\n",command.words[0]);
+            _exit(127);
+        }
+        free(command.words); free(command.operators);
+        if (previous>=0) close(previous);
+        if (descriptors[1]>=0) close(descriptors[1]);
+        previous=descriptors[0];
+        if (child<0) { perror("fork"); break; }
+        children[started++]=child;
+        begin=end+1;
+    }
+    if (previous>=0) close(previous);
+    for (size_t i=0;i<started;i++) while (waitpid(children[i],NULL,0)<0 && errno==EINTR) {}
+    free(children);
+}
 int main(void) {
     setbuf(stdout, NULL);
     char *line = NULL; size_t capacity = 0;
@@ -97,6 +147,9 @@ int main(void) {
         else { printf("$ "); if (getline(&line, &capacity, stdin) < 0) break; }
         Words args = parse(line);
         if (!args.count) { free_words(args); continue; }
+        int has_pipe = 0;
+        for (size_t i=0;i<args.count;i++) if (args.operators[i]==3) has_pipe=1;
+        if (has_pipe) { pipeline(args); free_words(args); continue; }
         int background = args.count && args.operators[args.count-1] == 2;
         if (background) { free(args.words[--args.count]); args.words[args.count] = NULL; }
         int job_id = 0; pid_t job_pid = -1;
