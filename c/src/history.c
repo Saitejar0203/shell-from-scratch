@@ -100,7 +100,9 @@ void history_load_startup(void) {
     if (read_entries(startup_path) < 0 && errno != ENOENT) perror("history");
 }
 
-void history_save_exit(void) {}
+void history_save_exit(void) {
+    if (startup_path && write_entries(startup_path, 0) < 0) perror("history");
+}
 int history_builtin(int argc, char **argv) {
     if (argc < 1) return 1;
     if (argc > 1 && (!strcmp(argv[1], "-r") || !strcmp(argv[1], "-w") || !strcmp(argv[1], "-a"))) {
