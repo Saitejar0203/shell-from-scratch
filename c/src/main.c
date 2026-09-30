@@ -36,7 +36,11 @@ static char *find_executable(const char *name) {
 static int builtin(Words args) {
     const char *command = args.words[0];
     if (!strcmp(command, "exit")) return 2;
-    if (!strcmp(command, "declare")) return 1;
+    if (!strcmp(command, "declare")) {
+        if (args.count>1 && !strcmp(args.words[1],"-p"))
+            for (size_t i=2;i<args.count;i++) fprintf(stderr,"declare: %s: not found\n",args.words[i]);
+        return 1;
+    }
     if (!strcmp(command, "history")) { history_builtin((int)args.count,args.words); return 1; }
     if (!strcmp(command, "jobs")) { jobs_list(0); return 1; }
     if (!strcmp(command, "complete")) { completion_builtin((int)args.count, args.words); return 1; }
