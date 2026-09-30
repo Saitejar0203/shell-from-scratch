@@ -34,6 +34,7 @@ static char *find_executable(const char *name) {
 static int builtin(Words args) {
     const char *command = args.words[0];
     if (!strcmp(command, "exit")) return 2;
+    if (!strcmp(command, "jobs")) return 1;
     if (!strcmp(command, "complete")) { completion_builtin((int)args.count, args.words); return 1; }
     if (!strcmp(command, "echo")) {
         for (size_t i = 1; i < args.count; i++) printf("%s%s", i > 1 ? " " : "", args.words[i]);
@@ -48,7 +49,7 @@ static int builtin(Words args) {
     } else if (!strcmp(command, "type")) {
         if (args.count > 1) {
             char *name = args.words[1];
-            if (!strcmp(name,"echo") || !strcmp(name,"exit") || !strcmp(name,"type") || !strcmp(name,"pwd") || !strcmp(name,"cd") || !strcmp(name,"complete"))
+            if (!strcmp(name,"echo") || !strcmp(name,"exit") || !strcmp(name,"type") || !strcmp(name,"pwd") || !strcmp(name,"cd") || !strcmp(name,"complete") || !strcmp(name,"jobs"))
                 printf("%s is a shell builtin\n", name);
             else {
                 char *path = find_executable(name);
