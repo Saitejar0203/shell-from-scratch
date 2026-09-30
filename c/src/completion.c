@@ -42,7 +42,8 @@ static char *command_candidate(const char *text, int state) {
 }
 static char **complete_word(const char *text,int start,int end) {
     (void)end; rl_attempted_completion_over=1;
-    char **matches=start==0?rl_completion_matches(text,command_candidate):NULL;
+    char **matches = start == 0 ? rl_completion_matches(text, command_candidate)
+                                : rl_completion_matches(text, rl_filename_completion_function);
 #ifdef __APPLE__
     if (!matches) { putchar('\a'); fflush(stdout); }
 #endif
