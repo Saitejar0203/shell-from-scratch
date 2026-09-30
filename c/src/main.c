@@ -39,13 +39,17 @@ int main(void) {
                 first = 0;
             }
             putchar('\n');
+        } else if (!strcmp(command, "cd")) {
+            char *directory = strtok_r(NULL, " \t\r\n", &save);
+            if (directory && chdir(directory) < 0)
+                fprintf(stderr, "cd: %s: %s\n", directory, strerror(errno));
         } else if (!strcmp(command, "pwd")) {
             char *cwd = getcwd(NULL, 0);
             if (cwd) { puts(cwd); free(cwd); } else perror("pwd");
         } else if (!strcmp(command, "type")) {
             char *name = strtok_r(NULL, " \t\r\n", &save);
             if (name) {
-                if (!strcmp(name, "echo") || !strcmp(name, "exit") || !strcmp(name, "type") || !strcmp(name, "pwd"))
+                if (!strcmp(name, "echo") || !strcmp(name, "exit") || !strcmp(name, "type") || !strcmp(name, "pwd") || !strcmp(name, "cd"))
                     printf("%s is a shell builtin\n", name);
                 else {
                     char *path = find_executable(name);
