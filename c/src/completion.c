@@ -58,12 +58,25 @@ static char **complete_word(const char *text,int start,int end) {
     rl_completion_append_character = ' ';
     char **matches = start == 0 ? rl_completion_matches(text, command_candidate)
                                 : rl_completion_matches(text, file_candidate);
+    rl_filename_completion_desired = 0;
 #ifdef __APPLE__
     if (!matches) { putchar('\a'); fflush(stdout); }
 #endif
     return matches;
 }
+#ifndef __APPLE__
+static void display_matches(char **matches, int count, int longest) {
+    (void)longest;
+    putchar('\n');
+    for (int i=1; i<=count; i++) printf("%s%s", i>1?"  ":"", matches[i]);
+    putchar('\n');
+    rl_on_new_line(); rl_redisplay();
+}
+#endif
 void completion_initialize(void) {
+#ifndef __APPLE__
+    rl_completion_display_matches_hook = display_matches;
+#endif
     rl_attempted_completion_function=complete_word;
     rl_bind_key('\t',rl_complete);
 }
