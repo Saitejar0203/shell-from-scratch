@@ -2,6 +2,8 @@
 import pathlib
 import subprocess
 import unittest
+import tempfile
+import os
 
 BINARY = pathlib.Path(__file__).resolve().parents[1] / 'build' / 'shell'
 
@@ -10,6 +12,14 @@ def run(commands, cwd=None):
                           capture_output=True, cwd=cwd, timeout=5)
 
 class ShellTests(unittest.TestCase):
+    def test_quoted_executable_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            exe = pathlib.Path(directory) / 'quoted program'
+            exe.write_text('#!/bin/sh\nprintf "%s\\n" "$1"\n')
+            exe.chmod(0o755)
+            result = run(f"'{exe}' 'hello world'\nexit\n")
+            self.assertIn('hello world\n', result.stdout)
+
     def test_single_quotes_preserve_backslashes(self):
         result = run("echo 'hello\\world'\nexit\n")
         self.assertIn("hello\\world\n", result.stdout)

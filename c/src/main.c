@@ -8,6 +8,10 @@
 #include <errno.h>
 
 static char *find_executable(const char *name) {
+    if (strchr(name, '/')) {
+        struct stat st;
+        return !stat(name, &st) && S_ISREG(st.st_mode) && !access(name, X_OK) ? strdup(name) : NULL;
+    }
     const char *value = getenv("PATH");
     if (!value) return NULL;
     char *paths = strdup(value), *cursor = paths, *directory;
