@@ -10,6 +10,10 @@ def run(commands, cwd=None):
                           capture_output=True, cwd=cwd, timeout=5)
 
 class ShellTests(unittest.TestCase):
+    def test_single_quotes_preserve_backslashes(self):
+        result = run("echo 'hello\\world'\nexit\n")
+        self.assertIn("hello\\world\n", result.stdout)
+
     def test_relative_directory_changes(self):
         root = pathlib.Path(__file__).resolve().parents[1]
         result = run('cd tests\npwd\ncd ..\npwd\nexit\n', root)
