@@ -19,7 +19,7 @@ static char *command_candidate(const char *text, int state) {
     if (!state) {
         for (size_t i=0;i<count;i++) free(candidates[i]);
         free(candidates); candidates=NULL; count=cursor=0;
-        const char *names[]={"echo","exit","type","pwd","cd",NULL};
+        const char *names[]={"echo","exit","type","pwd","cd","complete",NULL};
         for (size_t i=0;names[i];i++) add_candidate(names[i],text);
         char *paths=strdup(getenv("PATH")?getenv("PATH"):""), *walk=paths,*dir;
         while ((dir=strsep(&walk,":"))) {
