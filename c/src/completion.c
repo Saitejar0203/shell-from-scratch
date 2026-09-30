@@ -136,6 +136,33 @@ static void words_before(const char *line, size_t length, Strings *words) {
     if (active) { word[used] = 0; add_string(words, word); }
     free(word);
 }
+static void programmable_matches(const Specification *spec, const char *text,
+                                 const char *previous, const char *line, int point, Strings *out) {
+    int descriptors[2];
+    if (pipe(descriptors) < 0) return;
+    pid_t pid = fork();
+    if (pid == 0) {
+        close(descriptors[0]);
+        if (dup2(descriptors[1], STDOUT_FILENO) < 0) _exit(127);
+        close(descriptors[1]);
+        char point_text[32]; snprintf(point_text, sizeof(point_text), "%d", point);
+        (void)line; (void)point_text; (void)text; (void)previous;
+        char *args[] = {spec->script, NULL};
+        execvp(args[0], args); _exit(127);
+    }
+    close(descriptors[1]);
+    if (pid < 0) { close(descriptors[0]); return; }
+    FILE *stream = fdopen(descriptors[0], "r");
+    if (stream) {
+        char *candidate = NULL; size_t allocated = 0; ssize_t length;
+        while ((length = getline(&candidate, &allocated, stream)) >= 0) {
+            while (length && (candidate[length - 1] == '\n' || candidate[length - 1] == '\r')) candidate[--length] = 0;
+            if (length && starts_with(candidate, text)) add_string(out, candidate);
+        }
+        free(candidate); fclose(stream);
+    } else close(descriptors[0]);
+    while (waitpid(pid, NULL, 0) < 0 && errno == EINTR) {}
+}
 static char *next_match(const char *text, int state) {
     (void)text;
     if (!state) match_index = 0;
@@ -153,7 +180,8 @@ static char **attempt_completion(const char *text, int start, int end) {
     if (!words.count) command_matches(text, &matches);
     else {
         Specification *spec = find_specification(words.items[0]);
-        (void)spec; (void)end; file_matches(text, &matches);
+        if (spec) { programmed = 1; programmable_matches(spec, text, words.items[words.count - 1], line, end, &matches); }
+        else file_matches(text, &matches);
     }
     clear_strings(&words); sort_unique(&matches);
     if (!matches.count && libedit) { fputc('\a', stdout); fflush(stdout); }
