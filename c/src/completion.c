@@ -146,7 +146,7 @@ static void programmable_matches(const Specification *spec, const char *text,
         if (dup2(descriptors[1], STDOUT_FILENO) < 0) _exit(127);
         close(descriptors[1]);
         char point_text[32]; snprintf(point_text, sizeof(point_text), "%d", point);
-        (void)line; (void)point_text; (void)text; (void)previous;
+        if (setenv("COMP_LINE", line, 1) < 0 || setenv("COMP_POINT", point_text, 1) < 0) _exit(127);
         char *args[] = {spec->script, spec->command, (char *)text, (char *)previous, NULL};
         execvp(args[0], args); _exit(127);
     }
