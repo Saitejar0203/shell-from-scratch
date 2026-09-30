@@ -30,6 +30,13 @@ def interact(keys, environment=None):
     return data
 
 class CompletionTests(unittest.TestCase):
+    def test_nested_file_completion(self):
+        with tempfile.TemporaryDirectory() as directory:
+            nested = pathlib.Path(directory) / 'nested'
+            nested.mkdir(); (nested / 'example.txt').touch()
+            output = interact([f'echo {nested}/exam'.encode() + b'\t'])
+            self.assertIn(b'ple.txt', output)
+
     def test_completion_extends_only_common_prefix(self):
         with tempfile.TemporaryDirectory() as directory:
             for name in ['custom_common_one', 'custom_common_two']:
