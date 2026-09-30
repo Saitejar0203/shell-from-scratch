@@ -30,6 +30,11 @@ def interact(keys, environment=None):
     return data
 
 class CompletionTests(unittest.TestCase):
+    def test_missing_file_completion_rings_bell(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = interact([f'echo {directory}/missing'.encode() + b'\t'])
+            self.assertIn(b'\a', output)
+
     def test_directory_completion_appends_slash(self):
         with tempfile.TemporaryDirectory() as directory:
             (pathlib.Path(directory) / 'folder').mkdir()
