@@ -1,82 +1,224 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#define _POSIX_C_SOURCE 200809L
+#include "completion.h"
+#include <ctype.h>
 #include <dirent.h>
-#include <unistd.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <readline/readline.h>
-static char **candidates;
-static size_t count, cursor;
-static void add_candidate(const char *name, const char *prefix) {
-    if (strncmp(name, prefix, strlen(prefix))) return;
-    for (size_t i=0; i<count; i++) if (!strcmp(candidates[i], name)) return;
-    char **next = realloc(candidates, (count+1)*sizeof(*next));
-    if (!next) return;
-    candidates=next; candidates[count++]=strdup(name);
+
+typedef struct { char **items; size_t count, capacity; } Strings;
+typedef struct Specification { char *command, *script; struct Specification *next; } Specification;
+static Specification *specifications;
+static Strings matches;
+static size_t match_index;
+static const char *builtins[] = {"echo", "exit", "pwd", "type", "cd", "jobs", "history", "declare", "complete"};
+
+static void clear_strings(Strings *s) {
+    for (size_t i = 0; i < s->count; i++) free(s->items[i]);
+    free(s->items); *s = (Strings){0};
 }
-static int compare(const void *a,const void *b) { return strcmp(*(char*const*)a,*(char*const*)b); }
-static char *command_candidate(const char *text, int state) {
-    if (!state) {
-        for (size_t i=0;i<count;i++) free(candidates[i]);
-        free(candidates); candidates=NULL; count=cursor=0;
-        const char *names[]={"echo","exit","type","pwd","cd","complete",NULL};
-        for (size_t i=0;names[i];i++) add_candidate(names[i],text);
-        char *paths=strdup(getenv("PATH")?getenv("PATH"):""), *walk=paths,*dir;
-        while ((dir=strsep(&walk,":"))) {
-            if (!*dir) dir=".";
-            DIR *stream=opendir(dir); if (!stream) continue;
+static int add_string(Strings *s, const char *text) {
+    if (s->count == s->capacity) {
+        size_t capacity = s->capacity ? s->capacity * 2 : 32;
+        char **items = realloc(s->items, capacity * sizeof(*items));
+        if (!items) return -1;
+        s->items = items; s->capacity = capacity;
+    }
+    char *copy = strdup(text);
+    if (!copy) return -1;
+    s->items[s->count++] = copy; return 0;
+}
+static int compare_strings(const void *a, const void *b) {
+    return strcmp(*(char *const *)a, *(char *const *)b);
+}
+static void sort_unique(Strings *s) {
+    if (s->count < 2) return;
+    qsort(s->items, s->count, sizeof(*s->items), compare_strings);
+    size_t out = 1;
+    for (size_t i = 1; i < s->count; i++) {
+        if (!strcmp(s->items[out - 1], s->items[i])) free(s->items[i]);
+        else s->items[out++] = s->items[i];
+    }
+    s->count = out;
+}
+static char *join(const char *directory, const char *name) {
+    size_t a = strlen(directory), b = strlen(name);
+    char *path = malloc(a + b + 2);
+    if (!path) return NULL;
+    memcpy(path, directory, a);
+    if (a && directory[a - 1] != '/') path[a++] = '/';
+    memcpy(path + a, name, b + 1); return path;
+}
+static int starts_with(const char *value, const char *prefix) {
+    return strncmp(value, prefix, strlen(prefix)) == 0;
+}
+static Specification *find_specification(const char *command) {
+    for (Specification *s = specifications; s; s = s->next)
+        if (!strcmp(s->command, command)) return s;
+    return NULL;
+}
+static void command_matches(const char *prefix, Strings *out) {
+    for (size_t i = 0; i < sizeof(builtins) / sizeof(*builtins); i++)
+        if (starts_with(builtins[i], prefix)) add_string(out, builtins[i]);
+    const char *environment = getenv("PATH");
+    char *path = strdup(environment ? environment : "");
+    if (!path) return;
+    char *part = path;
+    for (;;) {
+        char *separator = strchr(part, ':');
+        if (separator) *separator = 0;
+        const char *directory = *part ? part : ".";
+        DIR *stream = opendir(directory);
+        if (stream) {
             struct dirent *entry;
-            while ((entry=readdir(stream))) {
-                size_t size=strlen(dir)+strlen(entry->d_name)+2;
-                char *path=malloc(size); if (!path) continue;
-                snprintf(path,size,"%s/%s",dir,entry->d_name);
+            while ((entry = readdir(stream))) {
+                if (!starts_with(entry->d_name, prefix)) continue;
+                char *full = join(directory, entry->d_name);
                 struct stat st;
-                if (!stat(path,&st)&&S_ISREG(st.st_mode)&&!access(path,X_OK)) add_candidate(entry->d_name,text);
-                free(path);
+                if (full && stat(full, &st) == 0 && S_ISREG(st.st_mode) && access(full, X_OK) == 0)
+                    add_string(out, entry->d_name);
+                free(full);
             }
             closedir(stream);
         }
-        free(paths); qsort(candidates,count,sizeof(*candidates),compare);
+        if (!separator) break;
+        part = separator + 1;
     }
-    return cursor<count?strdup(candidates[cursor++]):NULL;
+    free(path);
 }
-static char *file_candidate(const char *text, int state) {
-    char *candidate = rl_filename_completion_function(text, state);
-    struct stat st;
-    if (candidate && !stat(candidate, &st) && S_ISDIR(st.st_mode)) {
-        size_t length = strlen(candidate);
-        if (length && candidate[length-1] != '/') {
-            char *directory = realloc(candidate, length+2);
-            if (directory) { candidate=directory; candidate[length]='/'; candidate[length+1]=0; }
+static void file_matches(const char *text, Strings *out) {
+    const char *slash = strrchr(text, '/');
+    size_t directory_len = slash ? (size_t)(slash - text) + 1 : 0;
+    const char *prefix = text + directory_len;
+    char *typed = strndup(text, directory_len);
+    if (!typed) return;
+    DIR *stream = opendir(*typed ? typed : ".");
+    if (stream) {
+        struct dirent *entry;
+        while ((entry = readdir(stream))) {
+            if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..") ||
+                !starts_with(entry->d_name, prefix)) continue;
+            char *candidate = join(typed, entry->d_name);
+            struct stat st;
+            if (candidate && stat(candidate, &st) == 0) {
+                if (S_ISDIR(st.st_mode)) {
+                    size_t len = strlen(candidate);
+                    char *directory = realloc(candidate, len + 2);
+                    if (directory) { candidate = directory; candidate[len] = '/'; candidate[len + 1] = 0; add_string(out, candidate); }
+                } else if (S_ISREG(st.st_mode)) add_string(out, candidate);
+            }
+            free(candidate);
         }
-        rl_completion_append_character=0;
+        closedir(stream);
     }
-    return candidate;
+    free(typed);
 }
-static char **complete_word(const char *text,int start,int end) {
-    (void)end; rl_attempted_completion_over=1;
-    rl_completion_append_character = ' ';
-    char **matches = start == 0 ? rl_completion_matches(text, command_candidate)
-                                : rl_completion_matches(text, file_candidate);
+/* Only completed words are needed here. Preserve quoted/escaped argument text. */
+static void words_before(const char *line, size_t length, Strings *words) {
+    char *word = malloc(length + 1);
+    if (!word) return;
+    size_t used = 0; int quote = 0, active = 0;
+    for (size_t i = 0; i < length; i++) {
+        unsigned char c = (unsigned char)line[i];
+        if (c == '\\' && quote != '\'' && i + 1 < length) { word[used++] = line[++i]; active = 1; }
+        else if (quote) { if (c == quote) quote = 0; else word[used++] = (char)c; active = 1; }
+        else if (c == '\'' || c == '"') { quote = c; active = 1; }
+        else if (isspace(c)) {
+            if (active) { word[used] = 0; add_string(words, word); used = 0; active = 0; }
+        } else { word[used++] = (char)c; active = 1; }
+    }
+    if (active) { word[used] = 0; add_string(words, word); }
+    free(word);
+}
+static char *next_match(const char *text, int state) {
+    (void)text;
+    if (!state) match_index = 0;
+    return match_index < matches.count ? strdup(matches.items[match_index++]) : NULL;
+}
+static char **attempt_completion(const char *text, int start, int end) {
+    clear_strings(&matches);
+    rl_attempted_completion_over = 1;
     rl_filename_completion_desired = 0;
-#ifdef __APPLE__
-    if (!matches) { putchar('\a'); fflush(stdout); }
-#endif
-    return matches;
+    rl_completion_append_character = ' ';
+    const char *line = rl_line_buffer ? rl_line_buffer : "";
+    int programmed = 0;
+    int libedit = rl_library_version && (strstr(rl_library_version, "EditLine") || strstr(rl_library_version, "libedit"));
+    Strings words = {0}; words_before(line, start > 0 ? (size_t)start : 0, &words);
+    if (!words.count) command_matches(text, &matches);
+    else {
+        Specification *spec = find_specification(words.items[0]);
+        (void)spec; (void)end; file_matches(text, &matches);
+    }
+    clear_strings(&words); sort_unique(&matches);
+    if (!matches.count && libedit) { fputc('\a', stdout); fflush(stdout); }
+    if (programmed && libedit && matches.count > 1) {
+        size_t common = strlen(matches.items[0]);
+        for (size_t i = 1; i < matches.count; i++) {
+            size_t j = 0;
+            while (j < common && matches.items[i][j] == matches.items[0][j]) j++;
+            common = j;
+        }
+        if (common > strlen(text)) {
+            char *prefix = strndup(matches.items[0], common);
+            if (prefix) {
+                clear_strings(&matches); add_string(&matches, prefix); free(prefix);
+                rl_completion_append_character = '\0';
+            }
+        }
+    }
+    if (matches.count == 1) {
+        size_t n = strlen(matches.items[0]);
+        if (n && matches.items[0][n - 1] == '/') rl_completion_append_character = '\0';
+    }
+    char **result = rl_completion_matches(text, next_match);
+    clear_strings(&matches);
+    return result;
 }
-#ifndef __APPLE__
-static void display_matches(char **matches, int count, int longest) {
-    (void)longest;
-    putchar('\n');
-    for (int i=1; i<=count; i++) printf("%s%s", i>1?"  ":"", matches[i]);
-    putchar('\n');
-    rl_on_new_line(); rl_redisplay();
-}
-#endif
 void completion_initialize(void) {
-#ifndef __APPLE__
-    rl_completion_display_matches_hook = display_matches;
-#endif
-    rl_attempted_completion_function=complete_word;
-    rl_bind_key('\t',rl_complete);
+    rl_completer_word_break_characters = " \t\n";
+    rl_attempted_completion_function = attempt_completion;
+    rl_bind_key('\t', rl_complete);
+}
+static void print_quoted(const char *text) {
+    putchar('\'');
+    for (; *text; text++) { if (*text == '\'') fputs("'\\''", stdout); else putchar(*text); }
+    putchar('\'');
+}
+int completion_builtin(int argc, char **argv) {
+    if (argc > 1 && !strcmp(argv[1], "-C")) {
+        if (argc < 4) { fputs("complete: -C requires a script and command\n", stderr); return 1; }
+        for (int i = 3; i < argc; i++) {
+            char *script = strdup(argv[2]); if (!script) return 1;
+            Specification *spec = find_specification(argv[i]);
+            if (spec) { free(spec->script); spec->script = script; }
+            else {
+                spec = calloc(1, sizeof(*spec));
+                if (!spec) { free(script); return 1; }
+                spec->command = strdup(argv[i]);
+                if (!spec->command) { free(script); free(spec); return 1; }
+                spec->script = script; spec->next = specifications; specifications = spec;
+            }
+        }
+        return 0;
+    }
+    if (argc > 1 && !strcmp(argv[1], "-p")) {
+        int result = 0;
+        for (int i = 2; i < argc; i++) {
+            Specification *spec = find_specification(argv[i]);
+            if (spec) { fputs("complete -C ", stdout); print_quoted(spec->script); printf(" %s\n", spec->command); }
+            else { fprintf(stderr, "complete: %s: no completion specification\n", argv[i]); result = 1; }
+        }
+        return result;
+    }
+    fputs("complete: expected -C, -p, or -r\n", stderr); return 1;
+}
+void completion_cleanup(void) {
+    clear_strings(&matches);
+    while (specifications) { Specification *next = specifications->next; free(specifications->command); free(specifications->script); free(specifications); specifications = next; }
 }

@@ -1,6 +1,6 @@
 #include "shell.h"
 #include <readline/readline.h>
-void completion_initialize(void);
+#include "completion.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,11 +34,7 @@ static char *find_executable(const char *name) {
 static int builtin(Words args) {
     const char *command = args.words[0];
     if (!strcmp(command, "exit")) return 2;
-    if (!strcmp(command, "complete")) {
-        if (args.count > 2 && !strcmp(args.words[1], "-p"))
-            fprintf(stderr, "complete: %s: no completion specification\n", args.words[2]);
-        return 1;
-    }
+    if (!strcmp(command, "complete")) { completion_builtin((int)args.count, args.words); return 1; }
     if (!strcmp(command, "echo")) {
         for (size_t i = 1; i < args.count; i++) printf("%s%s", i > 1 ? " " : "", args.words[i]);
         putchar('\n');
@@ -116,5 +112,5 @@ int main(void) {
         restore(saved);
         free_words(args);
     }
-    free(line); return 0;
+    free(line); completion_cleanup(); return 0;
 }
