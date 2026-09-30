@@ -101,7 +101,7 @@ void history_load_startup(void) {
 }
 
 void history_save_exit(void) {
-    if (startup_path && write_entries(startup_path, 0) < 0) perror("history");
+    if (startup_path && write_entries(startup_path, 1) < 0) perror("history");
 }
 int history_builtin(int argc, char **argv) {
     if (argc < 1) return 1;
