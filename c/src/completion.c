@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <readline/readline.h>
 static char *builtin_candidate(const char *text, int state) {
@@ -14,7 +15,11 @@ static char *builtin_candidate(const char *text, int state) {
 static char **complete_word(const char *text, int start, int end) {
     (void)end;
     rl_attempted_completion_over = 1;
-    return start == 0 ? rl_completion_matches(text, builtin_candidate) : NULL;
+    char **matches = start == 0 ? rl_completion_matches(text, builtin_candidate) : NULL;
+#ifdef __APPLE__
+    if (!matches) { putchar('\a'); fflush(stdout); }
+#endif
+    return matches;
 }
 void completion_initialize(void) {
     rl_attempted_completion_function = complete_word;

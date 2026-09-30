@@ -29,6 +29,10 @@ def interact(keys):
     return data
 
 class CompletionTests(unittest.TestCase):
+    def test_unknown_prefix_rings_bell(self):
+        output = interact([b'nonexistent_unique_shell_prefix\t'])
+        self.assertIn(b'\a', output)
+
     def test_completed_command_accepts_arguments(self):
         output = interact([b'ech\t', b'hello world\n'])
         self.assertIn(b'hello world\r\n', output)
