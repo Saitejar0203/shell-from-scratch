@@ -44,6 +44,27 @@ void history_record(const char *line) {
     if (line && add_entry(line, 1) < 0) perror("history");
 }
 
+static int read_entries(const char *path) {
+    FILE *stream = fopen(path, "r");
+    if (!stream) return -1;
+    char *line = NULL;
+    size_t allocated = 0;
+    ssize_t length;
+    int result = 0;
+    while ((length = getline(&line, &allocated, stream)) >= 0) {
+        while (length && (line[length - 1] == '\n' || line[length - 1] == '\r'))
+            line[--length] = '\0';
+        /* File reads are recallable but never pending session appends. */
+        if (add_entry(line, 0) < 0) { result = -1; break; }
+    }
+    if (ferror(stream)) result = -1;
+    int saved_errno = errno;
+    free(line);
+    if (fclose(stream) != 0 && result == 0) return -1;
+    errno = saved_errno;
+    return result;
+}
+
 void history_cleanup(void) {
     for (size_t i = 0; i < count; i++) free(entries[i].line);
     free(entries); free(startup_path);
@@ -54,6 +75,11 @@ void history_cleanup(void) {
 void history_load_startup(void) { using_history(); history_cleanup(); }
 void history_save_exit(void) {}
 int history_builtin(int argc, char **argv) {
+    if (argc > 1 && !strcmp(argv[1], "-r")) {
+        if (argc != 3) { fprintf(stderr,"history: -r requires a path\n"); return 1; }
+        if (read_entries(argv[2]) < 0) { perror("history"); return 1; }
+        return 0;
+    }
     size_t requested = count;
     if (argc > 1) {
         if (argc != 2 || !*argv[1]) goto invalid_count;
