@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include <fcntl.h>
 
 static char *find_executable(const char *name) {
     if (strchr(name, '/')) {
@@ -55,14 +56,40 @@ static int builtin(Words args) {
     } else return 0;
     return 1;
 }
+static int redirect(Words *args, int saved[3]) {
+    for (int fd = 0; fd < 3; fd++) saved[fd] = -1;
+    for (size_t i = 0; i < args->count;) {
+        if (!args->operators[i]) { i++; continue; }
+        if (i + 1 >= args->count || args->operators[i+1]) {
+            fprintf(stderr, "shell: missing redirection filename\n"); return 0;
+        }
+        int fd = 1;
+        int file = open(args->words[i+1], O_WRONLY | O_CREAT | O_TRUNC, 0666);
+        if (file < 0) { perror(args->words[i+1]); return 0; }
+        if (saved[fd] < 0) saved[fd] = dup(fd);
+        if (saved[fd] < 0 || dup2(file, fd) < 0) { perror("redirect"); close(file); return 0; }
+        close(file);
+        free(args->words[i]); free(args->words[i+1]);
+        memmove(args->words+i, args->words+i+2, (args->count-i-1)*sizeof(char*));
+        memmove(args->operators+i, args->operators+i+2, args->count-i-2);
+        args->count -= 2;
+    }
+    return 1;
+}
+static void restore(int saved[3]) {
+    fflush(NULL);
+    for (int fd=0; fd<3; fd++) if (saved[fd]>=0) { dup2(saved[fd],fd); close(saved[fd]); }
+}
 int main(void) {
     setbuf(stdout, NULL);
     char *line = NULL; size_t capacity = 0;
     while (printf("$ "), getline(&line, &capacity, stdin) >= 0) {
         Words args = parse(line);
         if (!args.count) { free_words(args); continue; }
+        int saved[3];
+        if (!redirect(&args, saved) || !args.count) { restore(saved); free_words(args); continue; }
         int handled = builtin(args);
-        if (handled == 2) { free_words(args); break; }
+        if (handled == 2) { restore(saved); free_words(args); break; }
         if (!handled) {
             char *path = find_executable(args.words[0]);
             if (!path) printf("%s: command not found\n", args.words[0]);
@@ -74,6 +101,7 @@ int main(void) {
                 free(path);
             }
         }
+        restore(saved);
         free_words(args);
     }
     free(line); return 0;
