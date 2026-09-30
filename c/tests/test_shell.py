@@ -12,6 +12,16 @@ def run(commands, cwd=None):
                           capture_output=True, cwd=cwd, timeout=5)
 
 class ShellTests(unittest.TestCase):
+    def test_append_errors_and_restore_descriptors(self):
+        with tempfile.TemporaryDirectory() as directory:
+            errors = pathlib.Path(directory) / 'errors'
+            errors.write_text('existing\n')
+            result = run(f'ls /missing-shell-test 2>> {errors}\necho restored\nexit\n')
+            self.assertTrue(errors.read_text().startswith('existing\n'))
+            self.assertIn('missing-shell-test', errors.read_text())
+            self.assertIn('restored\n', result.stdout)
+            self.assertEqual(result.stderr, '')
+
     def test_quoted_executable_path(self):
         with tempfile.TemporaryDirectory() as directory:
             exe = pathlib.Path(directory) / 'quoted program'
