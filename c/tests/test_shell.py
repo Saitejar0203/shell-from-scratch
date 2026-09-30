@@ -12,6 +12,11 @@ def run(commands, cwd=None):
                           capture_output=True, cwd=cwd, timeout=5)
 
 class ShellTests(unittest.TestCase):
+    def test_completed_job_is_reported_and_removed(self):
+        result = run('sleep 0.01 &\nsleep 0.1\njobs\njobs\nexit\n')
+        self.assertEqual(result.stdout.count('Done'), 1)
+        self.assertNotIn('Running', result.stdout)
+
     def test_multiple_job_markers(self):
         result = run('sleep 0.2 &\nsleep 0.3 &\njobs\nexit\n')
         self.assertIn('[1]-  Running', result.stdout)
