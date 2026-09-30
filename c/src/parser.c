@@ -17,7 +17,8 @@ Words parse(const char *line) {
         while (line[pos]) {
             char c = line[pos];
             if (!quote && isspace((unsigned char)c)) break;
-            if (c == '\'') { quote = !quote; pos++; continue; }
+            if (!quote && (c == '\'' || c == '"')) { quote = c; pos++; continue; }
+            if (quote && c == quote) { quote = 0; pos++; continue; }
             word[used++] = c; pos++;
         }
         word[used] = 0;
