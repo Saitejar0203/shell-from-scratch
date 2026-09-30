@@ -30,6 +30,15 @@ def interact(keys, environment=None):
     return data
 
 class CompletionTests(unittest.TestCase):
+    def test_completion_extends_only_common_prefix(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for name in ['custom_common_one', 'custom_common_two']:
+                p = pathlib.Path(directory) / name
+                p.write_text('#!/bin/sh\n'); p.chmod(0o755)
+            output = interact([b'custom_\t'], {'PATH': directory})
+            self.assertIn(b'common_', output)
+            self.assertNotIn(b'custom_common_one  ', output)
+
     def test_ambiguous_commands_are_sorted(self):
         with tempfile.TemporaryDirectory() as directory:
             for name in ['custom_zebra', 'custom_apple']:
