@@ -30,6 +30,14 @@ def interact(keys, environment=None):
     return data
 
 class CompletionTests(unittest.TestCase):
+    def test_programmable_common_prefix(self):
+        with tempfile.TemporaryDirectory() as directory:
+            script = pathlib.Path(directory) / 'prefix'
+            script.write_text('#!/bin/sh\nprintf "checkout\\ncheck-ignore\\n"\n'); script.chmod(0o755)
+            output = interact([f'complete -C {script} git\n'.encode(), b'git ch\t'])
+            self.assertIn(b'eck', output)
+            self.assertNotIn(b'checkout  ', output)
+
     def test_programmable_alternatives(self):
         with tempfile.TemporaryDirectory() as directory:
             script = pathlib.Path(directory) / 'choices'
