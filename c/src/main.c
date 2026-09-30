@@ -1,6 +1,7 @@
 #include "shell.h"
 #include <readline/readline.h>
 #include "completion.h"
+#include "jobs.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -95,6 +96,9 @@ int main(void) {
         else { printf("$ "); if (getline(&line, &capacity, stdin) < 0) break; }
         Words args = parse(line);
         if (!args.count) { free_words(args); continue; }
+        int background = args.count && args.operators[args.count-1] == 2;
+        if (background) { free(args.words[--args.count]); args.words[args.count] = NULL; }
+        int job_id = 0; pid_t job_pid = -1;
         int saved[3];
         if (!redirect(&args, saved) || !args.count) { restore(saved); free_words(args); continue; }
         int handled = builtin(args);
@@ -105,13 +109,17 @@ int main(void) {
             else {
                 pid_t child = fork();
                 if (!child) { execv(path, args.words); perror(args.words[0]); _exit(127); }
-                if (child > 0) { while (waitpid(child, NULL, 0) < 0 && errno == EINTR) {} }
+                if (child > 0) {
+                    if (background) { job_id = jobs_add(child, line); job_pid = child; }
+                    else while (waitpid(child, NULL, 0) < 0 && errno == EINTR) {}
+                }
                 else perror("fork");
                 free(path);
             }
         }
         restore(saved);
+        if (job_id > 0) printf("[%d] %ld\n", job_id, (long)job_pid);
         free_words(args);
     }
-    free(line); completion_cleanup(); return 0;
+    free(line); jobs_clear(); completion_cleanup(); return 0;
 }

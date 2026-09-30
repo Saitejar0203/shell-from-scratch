@@ -13,6 +13,10 @@ Words parse(const char *line) {
     Words result = {allocate((n + 1) * sizeof(char *)), allocate(n + 1), 0};
     while (line[pos]) {
         if (isspace((unsigned char)line[pos])) { pos++; continue; }
+        if (line[pos] == '&') {
+            result.words[result.count] = strdup("&");
+            result.operators[result.count++] = 2; pos++; continue;
+        }
         if (line[pos] == '>' || ((line[pos] == '1' || line[pos] == '2') && line[pos+1] == '>')) {
             size_t begin = pos;
             if (line[pos] == '1' || line[pos] == '2') pos++;
@@ -25,7 +29,7 @@ Words parse(const char *line) {
         char *word = allocate(n + 1); size_t used = 0; int quote = 0;
         while (line[pos]) {
             char c = line[pos];
-            if (!quote && (isspace((unsigned char)c) || c == '>')) break;
+            if (!quote && (isspace((unsigned char)c) || c == '>' || c == '&')) break;
             if (!quote && (c == '\'' || c == '"')) { quote = c; pos++; continue; }
             if (quote && c == quote) { quote = 0; pos++; continue; }
             if (c == '\\' && line[pos + 1] && (!quote ||
