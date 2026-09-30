@@ -4,12 +4,12 @@ All 76 stages passed CodeCrafters tests and were marked complete on September 30
 
 | Stage | Exercise | Public commit | Submission |
 | --- | --- | --- | --- |
-| OO8 | Print a prompt | 3ee8fb1 | Passed |
-| CZ2 | Handle invalid commands | c01baca | Passed |
-| FF0 | Implement a REPL | 49cab8d | Passed |
-| PN5 | Implement exit | 8e9c67b | Passed |
-| IZ3 | Implement echo | 6bcdfbb | Passed |
-| EZ5 | Implement type | 63f5f2e | Passed |
+| OO8 | Print a prompt | [5253c07](https://github.com/Saitejar0203/shell-from-scratch/commit/5253c0729b805e572f24e3ae6491331ed9b30da1) | Passed |
+| CZ2 | Handle invalid commands | [14ae861](https://github.com/Saitejar0203/shell-from-scratch/commit/14ae86198c051a76383e9321c810ebe1cdb17a1a) | Passed |
+| FF0 | Implement a REPL | [4cfb3c3](https://github.com/Saitejar0203/shell-from-scratch/commit/4cfb3c37a756d8b382699c2fc3bff749a28877fb) | Passed |
+| PN5 | Implement exit | [dcd7633](https://github.com/Saitejar0203/shell-from-scratch/commit/dcd763303b901094f39d9dbdb33f95400fbffc16) | Passed |
+| IZ3 | Implement echo | [39e197c](https://github.com/Saitejar0203/shell-from-scratch/commit/39e197cab6fafa6c2c94cb751a9339b56d8cf18c) | Passed |
+| EZ5 | Implement type | [df22fd1](https://github.com/Saitejar0203/shell-from-scratch/commit/df22fd1c9ff3c4c84a8ed28c2f679ae3e9628be0) | Passed |
 | MG5 | Locate executable files | [092377c](https://github.com/Saitejar0203/shell-from-scratch/commit/092377c721cfa67470834a92bcce3f9cdff48ebb) | Passed |
 | IP1 | Run a program | [dfb858b](https://github.com/Saitejar0203/shell-from-scratch/commit/dfb858b4413af5835d6705669ad6f2979d8f6bad) | Passed |
 | EI0 | The pwd builtin | [38d3c24](https://github.com/Saitejar0203/shell-from-scratch/commit/38d3c2457f7ba4e74893af59203bccd4135ce251) | Passed |
