@@ -30,6 +30,13 @@ def interact(keys, environment=None):
     return data
 
 class CompletionTests(unittest.TestCase):
+    def test_empty_programmable_completion_rings_bell(self):
+        with tempfile.TemporaryDirectory() as directory:
+            script = pathlib.Path(directory) / 'empty'
+            script.write_text('#!/bin/sh\nexit 0\n'); script.chmod(0o755)
+            output = interact([f'complete -C {script} git\n'.encode(), b'git missing\t'])
+            self.assertIn(b'\a', output)
+
     def test_later_argument_completion(self):
         with tempfile.TemporaryDirectory() as directory:
             (pathlib.Path(directory) / 'example.txt').touch()
