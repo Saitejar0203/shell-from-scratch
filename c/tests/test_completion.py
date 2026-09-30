@@ -30,6 +30,13 @@ def interact(keys, environment=None):
     return data
 
 class CompletionTests(unittest.TestCase):
+    def test_filename_common_prefix(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for name in ['example_alpha', 'example_beta']:
+                (pathlib.Path(directory) / name).touch()
+            output = interact([f'echo {directory}/exam'.encode() + b'\t'])
+            self.assertIn(b'ple_', output)
+
     def test_multiple_filename_matches(self):
         with tempfile.TemporaryDirectory() as directory:
             for name in ['example_z', 'example_a']:
