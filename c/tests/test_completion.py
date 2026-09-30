@@ -30,6 +30,14 @@ def interact(keys, environment=None):
     return data
 
 class CompletionTests(unittest.TestCase):
+    def test_programmable_alternatives(self):
+        with tempfile.TemporaryDirectory() as directory:
+            script = pathlib.Path(directory) / 'choices'
+            script.write_text('#!/bin/sh\nprintf "checkout\\ncherry-pick\\n"\n'); script.chmod(0o755)
+            output = interact([f'complete -C {script} git\n'.encode(), b'git che\t', b'\t'])
+            self.assertIn(b'checkout', output)
+            self.assertIn(b'cherry-pick', output)
+
     def test_empty_programmable_completion_rings_bell(self):
         with tempfile.TemporaryDirectory() as directory:
             script = pathlib.Path(directory) / 'empty'
