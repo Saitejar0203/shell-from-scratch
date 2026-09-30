@@ -13,9 +13,9 @@ Words parse(const char *line) {
     Words result = {allocate((n + 1) * sizeof(char *)), allocate(n + 1), 0};
     while (line[pos]) {
         if (isspace((unsigned char)line[pos])) { pos++; continue; }
-        if (line[pos] == '>' || (line[pos] == '1' && line[pos+1] == '>')) {
+        if (line[pos] == '>' || ((line[pos] == '1' || line[pos] == '2') && line[pos+1] == '>')) {
             size_t begin = pos;
-            if (line[pos] == '1') pos++;
+            if (line[pos] == '1' || line[pos] == '2') pos++;
             pos++;
             result.words[result.count] = strndup(line + begin, pos - begin);
             result.operators[result.count++] = 1;
