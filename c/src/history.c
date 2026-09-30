@@ -54,7 +54,20 @@ void history_cleanup(void) {
 void history_load_startup(void) { using_history(); history_cleanup(); }
 void history_save_exit(void) {}
 int history_builtin(int argc, char **argv) {
-    (void)argc; (void)argv;
-    for (size_t i=0;i<count;i++) printf("%5zu  %s\n",i+1,entries[i].line);
-    return 0;
+    size_t requested = count;
+    if (argc > 1) {
+        if (argc != 2 || !*argv[1]) goto invalid_count;
+        requested = 0;
+        for (const unsigned char *p = (const unsigned char *)argv[1]; *p; p++) {
+            if (!isdigit(*p)) goto invalid_count;
+            unsigned digit = *p - '0';
+            requested = requested > (SIZE_MAX - digit) / 10 ? SIZE_MAX : requested * 10 + digit;
+        }
+    }
+    size_t start = requested < count ? count - requested : 0;
+    for (size_t i = start; i < count; i++) printf("%5zu  %s\n", i + 1, entries[i].line);
+    return ferror(stdout) ? 1 : 0;
+invalid_count:
+    fprintf(stderr, "history: expected a non-negative count\n");
+    return 1;
 }
