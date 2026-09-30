@@ -65,6 +65,24 @@ static int read_entries(const char *path) {
     return result;
 }
 
+static int write_entries(const char *path, int append) {
+    FILE *stream = fopen(path, append ? "a" : "w");
+    if (!stream) return -1;
+    int result = 0;
+    for (size_t i = 0; i < count; i++) {
+        if ((!append || entries[i].pending) &&
+            (fputs(entries[i].line, stream) == EOF || fputc('\n', stream) == EOF)) {
+            result = -1; break;
+        }
+    }
+    int saved_errno = errno;
+    if (fclose(stream) != 0) return -1;
+    if (result < 0) { errno = saved_errno; return -1; }
+    /* -w deliberately does not consume the append queue, matching Python. */
+    if (append) for (size_t i = 0; i < count; i++) entries[i].pending = 0;
+    return 0;
+}
+
 void history_cleanup(void) {
     for (size_t i = 0; i < count; i++) free(entries[i].line);
     free(entries); free(startup_path);
@@ -75,6 +93,11 @@ void history_cleanup(void) {
 void history_load_startup(void) { using_history(); history_cleanup(); }
 void history_save_exit(void) {}
 int history_builtin(int argc, char **argv) {
+    if (argc > 1 && !strcmp(argv[1], "-w")) {
+        if (argc != 3) { fprintf(stderr,"history: -w requires a path\n"); return 1; }
+        if (write_entries(argv[2],0) < 0) { perror("history"); return 1; }
+        return 0;
+    }
     if (argc > 1 && !strcmp(argv[1], "-r")) {
         if (argc != 3) { fprintf(stderr,"history: -r requires a path\n"); return 1; }
         if (read_entries(argv[2]) < 0) { perror("history"); return 1; }
