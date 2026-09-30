@@ -2,6 +2,7 @@
 #include <readline/readline.h>
 #include "completion.h"
 #include "jobs.h"
+#include "history.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,7 +36,7 @@ static char *find_executable(const char *name) {
 static int builtin(Words args) {
     const char *command = args.words[0];
     if (!strcmp(command, "exit")) return 2;
-    if (!strcmp(command, "history")) return 1;
+    if (!strcmp(command, "history")) { history_builtin((int)args.count,args.words); return 1; }
     if (!strcmp(command, "jobs")) { jobs_list(0); return 1; }
     if (!strcmp(command, "complete")) { completion_builtin((int)args.count, args.words); return 1; }
     if (!strcmp(command, "echo")) {
@@ -155,10 +156,13 @@ int main(void) {
     char *line = NULL; size_t capacity = 0;
     int interactive = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
     if (interactive) completion_initialize();
+    history_load_startup();
     for (;;) {
         jobs_list(1);
         if (interactive) { free(line); line = readline("$ "); if (!line) break; }
         else { printf("$ "); if (getline(&line, &capacity, stdin) < 0) break; }
+        line[strcspn(line,"\r\n")]=0;
+        history_record(line);
         Words args = parse(line);
         if (!args.count) { free_words(args); continue; }
         int has_pipe = 0;
@@ -189,5 +193,6 @@ int main(void) {
         if (job_id > 0) printf("[%d] %ld\n", job_id, (long)job_pid);
         free_words(args);
     }
+    history_save_exit(); history_cleanup();
     free(line); jobs_clear(); completion_cleanup(); return 0;
 }
