@@ -12,6 +12,11 @@ def run(commands, cwd=None):
                           capture_output=True, cwd=cwd, timeout=5)
 
 class ShellTests(unittest.TestCase):
+    def test_background_program_keeps_output_stream(self):
+        result = run("/usr/bin/printf background-output &\nsleep 0.1\nexit\n")
+        self.assertIn('background-output', result.stdout)
+        self.assertRegex(result.stdout, r'\[1\] \d+')
+
     def test_append_errors_and_restore_descriptors(self):
         with tempfile.TemporaryDirectory() as directory:
             errors = pathlib.Path(directory) / 'errors'
