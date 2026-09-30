@@ -2,9 +2,9 @@
 
 ## Goal
 
-Use this project to learn how shells and operating systems work while completing CodeCrafters efficiently with coding-agent assistance.
+Use this project to learn how shells and operating systems work while completing CodeCrafters efficiently.
 
-Python typing speed and syntax memorization are not primary goals. Teja should still become able to design behavior, read generated code, trace execution, interpret failures, and explain the underlying system mechanisms.
+Python typing speed and syntax memorization are not primary goals. Teja should still become able to design behavior, read code, trace execution, interpret failures, and explain the underlying system mechanisms.
 
 Passing a stage is evidence that the implementation satisfies its tests; it is not by itself evidence that the concept was learned.
 
@@ -17,7 +17,7 @@ Passing a stage is evidence that the implementation satisfies its tests; it is n
 - After implementation, trace at least one representative input through the program and explain the key mechanism.
 - Write code personally whenever useful, but do not spend time typing syntax merely for its own sake.
 
-## Codex's Role
+## Collaborator Responsibilities
 
 - Inspect the live repository and relevant evidence before making claims.
 - Explain what the stage asks, why it matters, and the relevant Python, shell, or OS mechanism in simple terms.
@@ -31,8 +31,8 @@ Passing a stage is evidence that the implementation satisfies its tests; it is n
 ## Stage Workflow
 
 1. **Understand:** Explain the stage and connect it to the current program and relevant system concept.
-2. **Design:** Teja gives pseudocode or a behavioral plan; Codex reviews it. Plain English is acceptable.
-3. **Implement:** After an explicit implementation request, Codex writes the minimal code and explains the consequential choices.
+2. **Design:** Teja gives pseudocode or a behavioral plan; the collaborator reviews it. Plain English is acceptable.
+3. **Implement:** After an explicit implementation request, the collaborator writes the minimal code and explains the consequential choices.
 4. **Verify:** Run focused local tests. Fix mechanical syntax issues quickly; pause and reason together when a failure reveals a conceptual gap.
 5. **Consolidate:** Trace one real example from input to output and state the reusable lesson.
 

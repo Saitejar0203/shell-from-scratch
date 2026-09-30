@@ -1,6 +1,6 @@
-# Shell in Python
+# Shell from Scratch
 
-A small Unix-style shell built in Python to learn operating-system basics through implementation: processes, executable lookup, working directories, environment variables, and standard input/output.
+I’m building a Unix-style shell in Python from scratch to deepen my understanding of low-level CS fundamentals and become better at building systems. I’m exploring processes, executable lookup, working directories, environment variables, and standard input/output.
 
 The goal is to understand what happens between typing a command and seeing its result, then build up the shell one feature at a time.
 
@@ -28,8 +28,8 @@ The goal is to understand what happens between typing a command and seeing its r
 Use macOS or Linux with [uv](https://docs.astral.sh/uv/) installed. The project targets Python 3.14.
 
 ```sh
-git clone https://github.com/Saitejar0203/shell-in-python.git
-cd shell-in-python
+git clone https://github.com/Saitejar0203/shell-from-scratch.git
+cd shell-from-scratch
 ./your_program.sh
 ```
 
