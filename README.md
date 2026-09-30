@@ -6,67 +6,39 @@ The goal is to understand what happens between typing a command and seeing its r
 
 The implementations live in `python/` and `c/`. Each language has its own CodeCrafters submission checkout; this repository keeps them together for comparison.
 
-## Python features
+## Implementations
 
-- An interactive command loop with a `$ ` prompt.
-- Tab completion for builtin and executable command names in `PATH`, with a trailing space after a unique match.
-- Filename completion in any argument: nested paths, directory slashes, shared prefixes, sorted alternatives, and bells for missing matches.
-- Builtins: `echo`, `exit`, `pwd`, `cd`, `type`, `jobs`, `history`, `declare`, and `complete`.
-- Pipelines connecting any number of external commands or builtins.
-- In-memory history with arrow navigation, numbered listing, and HISTFILE persistence.
-- Shell variables declared with `declare`, expanded with `$NAME` and `${NAME}`.
-- Programmable completion scripts registered with `complete -C`, inspected with `-p`, and removed with `-r`.
-- Background external commands using a trailing `&`, with sequential job numbers and OS process IDs.
-- Executable discovery through `PATH` and external program execution.
-- Directory navigation using absolute paths, relative paths, and `cd ~` through `HOME`.
-- Single and double quotes, adjacent quoted strings, and backslash escaping.
-- Quoted executable names and filenames containing spaces.
-- Standard-output redirection with `>` and `1>`, and standard-error redirection with `2>` for builtins and external programs.
-- Append output with `>>` / `1>>` and append errors with `2>>`, preserving existing file contents.
-- Error messages for invalid commands, failed directory changes, and unmatched quotes.
+Both languages cover all 76 currently available CodeCrafters shell stages: builtins, external processes, navigation, quoting, redirection, command/file/programmable completion, background jobs, pipelines, persistent history, and shell-local variables.
+
+- [Python](python/): source in `app/`, behavioral tests in `tests/`, and [Readline notes](python/docs/readline.md).
+- [C](c/): source in `src/`, with explicit process, descriptor, and memory management.
+
+Each exercise has its own commit and was submitted to CodeCrafters. The original Python history is preserved.
 
 ## Run locally
 
-Use macOS or Linux with [uv](https://docs.astral.sh/uv/) installed. The project targets Python 3.14.
-
 ```sh
 git clone https://github.com/Saitejar0203/shell-from-scratch.git
-cd shell-from-scratch/python
-./your_program.sh
+cd shell-from-scratch
 ```
 
-Inside the shell, try:
+Python requires [uv](https://docs.astral.sh/uv/) and targets Python 3.14:
 
 ```sh
-pwd
-echo 'hello    world'
-type echo
-type ls
-ls
-cd /tmp
-pwd
-cd ~
-exit
+cd python
+./your_program.sh
+uv run python -m unittest discover -s tests -v
 ```
 
-## How it works
+C requires a compiler, CMake, and Readline development headers/library. macOS includes a compatible libedit interface:
 
-Start with [`app/main.py`](python/app/main.py), then follow the functions it calls:
+```sh
+cd c
+./your_program.sh
+python3 -m unittest discover -s tests -v
+```
 
-| Module | Responsibility |
-| --- | --- |
-| [`app/main.py`](python/app/main.py) | Prompt, read input, coordinate each command, and report errors. |
-| [`app/completion.py`](python/app/completion.py) | Configure Readline and choose command, filename, or programmable candidates. |
-| [`app/programmable.py`](python/app/programmable.py) | Store completion scripts and run them with argument/cursor context. |
-| [`app/pipeline.py`](python/app/pipeline.py) | Fork concurrent stages, wire pipes, close unused ends, and wait. |
-| [`app/history.py`](python/app/history.py) | Manage Readline history, file loading, and session append tracking. |
-| [`app/variables.py`](python/app/variables.py) | Store shell variables, validate names, and resolve expansion syntax. |
-| [`app/state.py`](python/app/state.py) | Group the state owned by one shell process. |
-| [`app/parser.py`](python/app/parser.py) | Recognize words, quotes, expansions, escapes, and pipeline/redirection operators; separate arguments from redirections. |
-| [`app/redirection.py`](python/app/redirection.py) | Open output files, temporarily redirect descriptors, then restore and close them. |
-| [`app/commands.py`](python/app/commands.py) | Handle builtins, search `PATH`, and launch external programs. |
-
-Each command follows this path:
+The source modules separate parsing, execution, completion, history, jobs, and variables. A command follows this path:
 
 ```text
 input → record history → parse words/operators/expansions
@@ -74,22 +46,6 @@ input → record history → parse words/operators/expansions
       → pipeline: wire pipes → launch all children → wait
       → report completed background jobs → next prompt
 ```
-
-The parser only processes text. File-descriptor changes belong to `redirection.py`, and command behavior belongs to `commands.py`.
-
-`cd` changes the shell process's own working directory. External programs inherit its working directory, environment, and standard streams by default.
-
-Read [Readline and command completion](python/docs/readline.md) for the input path, callback trace, and PATH search design.
-
-## Local checks
-
-Run from the `python/` directory:
-
-```sh
-uv run python -m unittest discover -s tests -v
-```
-
-The tests launch the shell as a separate process and check file contents, output streams, and error recovery.
 
 ## Learning focus
 
@@ -101,4 +57,4 @@ The tests launch the shell as a separate process and check file contents, output
 
 ## Project status
 
-The Python implementation covers all currently available CodeCrafters shell exercises. The C implementation is being built stage by stage. This remains a learning shell rather than a complete POSIX shell. Background pipelines/builtins, full interactive signal job control, multiline input, arbitrary shell expansion, and concurrent history merging are outside the exercise scope. Background jobs support listing, completion notifications, reaping, and number recycling.
+Both implementations cover all currently available CodeCrafters shell exercises. This remains a learning shell rather than a complete POSIX shell. Background pipelines/builtins, full interactive signal job control, multiline input, arbitrary shell expansion, and concurrent history merging are outside the exercise scope. Background jobs support listing, completion notifications, reaping, and number recycling.
