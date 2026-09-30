@@ -90,7 +90,16 @@ void history_cleanup(void) {
     clear_history();
 }
 
-void history_load_startup(void) { using_history(); history_cleanup(); }
+void history_load_startup(void) {
+    using_history();
+    history_cleanup();
+    const char *path = getenv("HISTFILE");
+    if (!path || !*path) return;
+    startup_path = strdup(path);
+    if (!startup_path) { perror("history"); return; }
+    if (read_entries(startup_path) < 0 && errno != ENOENT) perror("history");
+}
+
 void history_save_exit(void) {}
 int history_builtin(int argc, char **argv) {
     if (argc < 1) return 1;
