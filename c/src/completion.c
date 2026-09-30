@@ -40,10 +40,24 @@ static char *command_candidate(const char *text, int state) {
     }
     return cursor<count?strdup(candidates[cursor++]):NULL;
 }
+static char *file_candidate(const char *text, int state) {
+    char *candidate = rl_filename_completion_function(text, state);
+    struct stat st;
+    if (candidate && !stat(candidate, &st) && S_ISDIR(st.st_mode)) {
+        size_t length = strlen(candidate);
+        if (length && candidate[length-1] != '/') {
+            char *directory = realloc(candidate, length+2);
+            if (directory) { candidate=directory; candidate[length]='/'; candidate[length+1]=0; }
+        }
+        rl_completion_append_character=0;
+    }
+    return candidate;
+}
 static char **complete_word(const char *text,int start,int end) {
     (void)end; rl_attempted_completion_over=1;
+    rl_completion_append_character = ' ';
     char **matches = start == 0 ? rl_completion_matches(text, command_candidate)
-                                : rl_completion_matches(text, rl_filename_completion_function);
+                                : rl_completion_matches(text, file_candidate);
 #ifdef __APPLE__
     if (!matches) { putchar('\a'); fflush(stdout); }
 #endif

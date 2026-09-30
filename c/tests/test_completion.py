@@ -30,6 +30,13 @@ def interact(keys, environment=None):
     return data
 
 class CompletionTests(unittest.TestCase):
+    def test_directory_completion_appends_slash(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (pathlib.Path(directory) / 'folder').mkdir()
+            output = interact([f'echo {directory}/fold'.encode() + b'\t'])
+            self.assertIn(b'er/', output)
+            self.assertNotIn(b'er/ ', output)
+
     def test_nested_file_completion(self):
         with tempfile.TemporaryDirectory() as directory:
             nested = pathlib.Path(directory) / 'nested'
