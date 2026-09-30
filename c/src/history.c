@@ -93,14 +93,12 @@ void history_cleanup(void) {
 void history_load_startup(void) { using_history(); history_cleanup(); }
 void history_save_exit(void) {}
 int history_builtin(int argc, char **argv) {
-    if (argc > 1 && !strcmp(argv[1], "-w")) {
-        if (argc != 3) { fprintf(stderr,"history: -w requires a path\n"); return 1; }
-        if (write_entries(argv[2],0) < 0) { perror("history"); return 1; }
-        return 0;
-    }
-    if (argc > 1 && !strcmp(argv[1], "-r")) {
-        if (argc != 3) { fprintf(stderr,"history: -r requires a path\n"); return 1; }
-        if (read_entries(argv[2]) < 0) { perror("history"); return 1; }
+    if (argc < 1) return 1;
+    if (argc > 1 && (!strcmp(argv[1], "-r") || !strcmp(argv[1], "-w") || !strcmp(argv[1], "-a"))) {
+        if (argc != 3) { fprintf(stderr, "history: %s requires a path\n", argv[1]); return 1; }
+        int result = !strcmp(argv[1], "-r") ? read_entries(argv[2]) :
+                     write_entries(argv[2], !strcmp(argv[1], "-a"));
+        if (result < 0) { fprintf(stderr, "history: %s: %s\n", argv[2], strerror(errno)); return 1; }
         return 0;
     }
     size_t requested = count;
