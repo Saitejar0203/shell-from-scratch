@@ -7,9 +7,20 @@ int main(void) {
     char *line = NULL;
     size_t capacity = 0;
     while (printf("$ "), getline(&line, &capacity, stdin) >= 0) {
-        line[strcspn(line, "\r\n")] = '\0';
-        if (!strcmp(line, "exit") || !strcmp(line, "exit 0")) break;
-        printf("%s: command not found\n", line);
+        char *save = NULL;
+        char *command = strtok_r(line, " \t\r\n", &save);
+        if (!command) continue;
+        if (!strcmp(command, "exit")) break;
+        if (!strcmp(command, "echo")) {
+            char *word; int first = 1;
+            while ((word = strtok_r(NULL, " \t\r\n", &save))) {
+                printf("%s%s", first ? "" : " ", word);
+                first = 0;
+            }
+            putchar('\n');
+        } else {
+            printf("%s: command not found\n", command);
+        }
     }
     free(line);
     return 0;
