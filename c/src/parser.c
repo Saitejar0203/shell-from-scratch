@@ -35,11 +35,11 @@ Words parse(const char *line) {
             result.operators[result.count++] = 1;
             continue;
         }
-        char *word = allocate(n + 1); size_t used = 0, room = n+1; int quote = 0;
+        char *word = allocate(n + 1); size_t used = 0, room = n+1; int quote = 0, quoted = 0;
         while (line[pos]) {
             char c = line[pos];
             if (!quote && (isspace((unsigned char)c) || c == '>' || c == '&' || c == '|')) break;
-            if (!quote && (c == '\'' || c == '"')) { quote = c; pos++; continue; }
+            if (!quote && (c == '\'' || c == '"')) { quote = c; quoted = 1; pos++; continue; }
             if (quote && c == quote) { quote = 0; pos++; continue; }
             if (c == '\\' && line[pos + 1] && (!quote ||
                 (quote == '"' && strchr("\\\"$`\n", line[pos + 1])))) {
@@ -66,6 +66,7 @@ Words parse(const char *line) {
             }
             word[used++] = c; pos++;
         }
+        if (!used && !quoted) { free(word); continue; }
         word[used] = 0;
         result.operators[result.count] = 0;
         result.words[result.count++] = word;
