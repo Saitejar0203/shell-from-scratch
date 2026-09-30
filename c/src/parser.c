@@ -17,6 +17,7 @@ Words parse(const char *line) {
             size_t begin = pos;
             if (line[pos] == '1' || line[pos] == '2') pos++;
             pos++;
+            if (line[pos] == '>') pos++;
             result.words[result.count] = strndup(line + begin, pos - begin);
             result.operators[result.count++] = 1;
             continue;

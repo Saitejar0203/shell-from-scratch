@@ -64,7 +64,8 @@ static int redirect(Words *args, int saved[3]) {
             fprintf(stderr, "shell: missing redirection filename\n"); return 0;
         }
         int fd = args->words[i][0] == '2' ? 2 : 1;
-        int file = open(args->words[i+1], O_WRONLY | O_CREAT | O_TRUNC, 0666);
+        int mode = strstr(args->words[i], ">>") ? O_APPEND : O_TRUNC;
+        int file = open(args->words[i+1], O_WRONLY | O_CREAT | mode, 0666);
         if (file < 0) { perror(args->words[i+1]); return 0; }
         if (saved[fd] < 0) saved[fd] = dup(fd);
         if (saved[fd] < 0 || dup2(file, fd) < 0) { perror("redirect"); close(file); return 0; }
