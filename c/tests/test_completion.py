@@ -30,6 +30,10 @@ def interact(keys, environment=None):
     return data
 
 class CompletionTests(unittest.TestCase):
+    def test_down_arrow_returns_to_newer_history(self):
+        output = interact([b"echo first_marker\n", b"echo second_marker\n", b"\x1b[A\x1b[A\x1b[B\n"])
+        self.assertTrue(output.endswith(b"second_marker\r\n$ "), output)
+
     def test_up_arrow_recalls_previous_command(self):
         output = interact([b"echo recall_marker\n", b"\x1b[A"])
         self.assertGreaterEqual(output.count(b"recall_marker"), 3)
