@@ -12,6 +12,11 @@ def run(commands, cwd=None):
                           capture_output=True, cwd=cwd, timeout=5)
 
 class ShellTests(unittest.TestCase):
+    def test_multistage_pipeline_transfers_more_than_pipe_capacity(self):
+        result = run('seq 1 50000 | cat | wc -l\nexit\n')
+        self.assertRegex(result.stdout, r'50000\s')
+        self.assertEqual(result.stderr, '')
+
     def test_job_numbers_recycle_after_reaping(self):
         result = run('sleep 0.01 &\nsleep 0.1\nsleep 0.01 &\nsleep 0.1\nexit\n')
         self.assertEqual(len(__import__('re').findall(r'\[1\] \d+', result.stdout)), 2)
