@@ -119,6 +119,8 @@ static void pipeline(Words args) {
             }
             int saved[3];
             if (!redirect(&command,saved) || !command.count) _exit(1);
+            int handled = builtin(command);
+            if (handled) { fflush(NULL); _exit(0); }
             char *path=find_executable(command.words[0]);
             if (path) execv(path,command.words);
             fprintf(stderr,"%s: command not found\n",command.words[0]);
