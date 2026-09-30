@@ -45,10 +45,16 @@ Words parse(const char *line) {
                 (quote == '"' && strchr("\\\"$`\n", line[pos + 1])))) {
                 pos++; word[used++] = line[pos++]; continue;
             }
-            if (c=='$' && quote!='\'' && name_start((unsigned char)line[pos+1])) {
-                size_t begin=++pos;
-                while (name_part((unsigned char)line[pos])) pos++;
-                char *name=strndup(line+begin,pos-begin);
+            if (c=='$' && quote!='\'' && (name_start((unsigned char)line[pos+1]) || line[pos+1]=='{')) {
+                size_t begin=pos+1, end=begin;
+                int braces=line[begin]=='{';
+                if (braces) {
+                    begin++; end=begin;
+                    while (line[end] && line[end]!='}') end++;
+                    if (!line[end]) { word[used++]=c; pos++; continue; }
+                } else while (name_part((unsigned char)line[end])) end++;
+                char *name=strndup(line+begin,end-begin);
+                pos=end+(braces ? 1 : 0);
                 const char *value=variable_get(name);
                 size_t length=strlen(value);
                 room += length;
