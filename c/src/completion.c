@@ -147,7 +147,7 @@ static void programmable_matches(const Specification *spec, const char *text,
         close(descriptors[1]);
         char point_text[32]; snprintf(point_text, sizeof(point_text), "%d", point);
         (void)line; (void)point_text; (void)text; (void)previous;
-        char *args[] = {spec->script, NULL};
+        char *args[] = {spec->script, spec->command, (char *)text, (char *)previous, NULL};
         execvp(args[0], args); _exit(127);
     }
     close(descriptors[1]);
