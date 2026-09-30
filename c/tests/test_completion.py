@@ -30,6 +30,14 @@ def interact(keys, environment=None):
     return data
 
 class CompletionTests(unittest.TestCase):
+    def test_multiple_filename_matches(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for name in ['example_z', 'example_a']:
+                (pathlib.Path(directory) / name).touch()
+            output = interact([f'echo {directory}/example_'.encode() + b'\t', b'\t'])
+            self.assertIn(b'example_a', output)
+            self.assertIn(b'example_z', output)
+
     def test_missing_file_completion_rings_bell(self):
         with tempfile.TemporaryDirectory() as directory:
             output = interact([f'echo {directory}/missing'.encode() + b'\t'])
