@@ -12,6 +12,11 @@ def run(commands, cwd=None):
                           capture_output=True, cwd=cwd, timeout=5)
 
 class ShellTests(unittest.TestCase):
+    def test_variable_names_validate_and_redeclaration_preserves_value(self):
+        result = run('declare _valid2=hello 2bad=no bad-name=no\ndeclare _valid2\ndeclare -p _valid2\nexit\n')
+        self.assertIn('declare -- _valid2="hello"', result.stdout)
+        self.assertEqual(result.stderr.count('not a valid identifier'), 2)
+
     def test_multistage_pipeline_transfers_more_than_pipe_capacity(self):
         result = run('seq 1 50000 | cat | wc -l\nexit\n')
         self.assertRegex(result.stdout, r'50000\s')
