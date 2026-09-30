@@ -1,6 +1,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/stat.h>
+
+static char *find_executable(const char *name) {
+    const char *value = getenv("PATH");
+    if (!value) return NULL;
+    char *paths = strdup(value), *cursor = paths, *directory;
+    while ((directory = strsep(&cursor, ":"))) {
+        size_t size = strlen(directory) + strlen(name) + 3;
+        char *path = malloc(size);
+        snprintf(path, size, "%s/%s", *directory ? directory : ".", name);
+        struct stat st;
+        if (!stat(path, &st) && S_ISREG(st.st_mode) && !access(path, X_OK)) {
+            free(paths); return path;
+        }
+        free(path);
+    }
+    free(paths); return NULL;
+}
 
 int main(void) {
     setbuf(stdout, NULL);
@@ -23,7 +42,11 @@ int main(void) {
             if (name) {
                 if (!strcmp(name, "echo") || !strcmp(name, "exit") || !strcmp(name, "type"))
                     printf("%s is a shell builtin\n", name);
-                else printf("%s: not found\n", name);
+                else {
+                    char *path = find_executable(name);
+                    if (path) { printf("%s is %s\n", name, path); free(path); }
+                    else printf("%s: not found\n", name);
+                }
             }
         } else {
             printf("%s: command not found\n", command);
