@@ -30,6 +30,11 @@ def interact(keys, environment=None):
     return data
 
 class CompletionTests(unittest.TestCase):
+    def test_recalled_command_is_executed_and_recorded(self):
+        output = interact([b"echo repeated_marker\n", b"\x1b[A\n", b"history\n"])
+        self.assertIn(b"    2  echo repeated_marker", output)
+        self.assertIn(b"    3  history", output)
+
     def test_down_arrow_returns_to_newer_history(self):
         output = interact([b"echo first_marker\n", b"echo second_marker\n", b"\x1b[A\x1b[A\x1b[B\n"])
         self.assertTrue(output.endswith(b"second_marker\r\n$ "), output)
