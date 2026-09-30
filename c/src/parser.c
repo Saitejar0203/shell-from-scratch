@@ -1,4 +1,5 @@
 #include "shell.h"
+#include "variables.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +9,10 @@ void *allocate(size_t bytes) {
     if (!p) { perror("malloc"); exit(1); }
     return p;
 }
+static int name_start(unsigned char c) {
+    return c=='_' || (c>='a' && c<='z') || (c>='A' && c<='Z');
+}
+static int name_part(unsigned char c) { return name_start(c) || (c>='0' && c<='9'); }
 Words parse(const char *line) {
     size_t n = strlen(line), pos = 0;
     Words result = {allocate((n + 1) * sizeof(char *)), allocate(n + 1), 0};
@@ -30,7 +35,7 @@ Words parse(const char *line) {
             result.operators[result.count++] = 1;
             continue;
         }
-        char *word = allocate(n + 1); size_t used = 0; int quote = 0;
+        char *word = allocate(n + 1); size_t used = 0, room = n+1; int quote = 0;
         while (line[pos]) {
             char c = line[pos];
             if (!quote && (isspace((unsigned char)c) || c == '>' || c == '&' || c == '|')) break;
@@ -39,6 +44,19 @@ Words parse(const char *line) {
             if (c == '\\' && line[pos + 1] && (!quote ||
                 (quote == '"' && strchr("\\\"$`\n", line[pos + 1])))) {
                 pos++; word[used++] = line[pos++]; continue;
+            }
+            if (c=='$' && quote!='\'' && name_start((unsigned char)line[pos+1])) {
+                size_t begin=++pos;
+                while (name_part((unsigned char)line[pos])) pos++;
+                char *name=strndup(line+begin,pos-begin);
+                const char *value=variable_get(name);
+                size_t length=strlen(value);
+                room += length;
+                char *grown=realloc(word,room);
+                if (!grown) { perror("realloc"); exit(1); }
+                word=grown;
+                memcpy(word+used,value,length); used+=length;
+                free(name); continue;
             }
             word[used++] = c; pos++;
         }
