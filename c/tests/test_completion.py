@@ -30,6 +30,10 @@ def interact(keys, environment=None):
     return data
 
 class CompletionTests(unittest.TestCase):
+    def test_up_arrow_recalls_previous_command(self):
+        output = interact([b"echo recall_marker\n", b"\x1b[A"])
+        self.assertGreaterEqual(output.count(b"recall_marker"), 3)
+
     def test_programmable_common_prefix(self):
         with tempfile.TemporaryDirectory() as directory:
             script = pathlib.Path(directory) / 'prefix'
