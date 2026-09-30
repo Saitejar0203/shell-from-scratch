@@ -1,10 +1,12 @@
 # Shell from Scratch
 
-I’m building a Unix-style shell in Python from scratch to deepen my understanding of low-level CS fundamentals and become better at building systems. I’m exploring processes, executable lookup, working directories, environment variables, and standard input/output.
+I’m building a Unix-style shell in Python and C from scratch to deepen my understanding of low-level CS fundamentals and become better at building systems. I’m exploring processes, executable lookup, working directories, environment variables, and standard input/output.
 
 The goal is to understand what happens between typing a command and seeing its result, then build up the shell one feature at a time.
 
-## Features
+The implementations live in `python/` and `c/`. Each language has its own CodeCrafters submission checkout; this repository keeps them together for comparison.
+
+## Python features
 
 - An interactive command loop with a `$ ` prompt.
 - Tab completion for builtin and executable command names in `PATH`, with a trailing space after a unique match.
@@ -29,7 +31,7 @@ Use macOS or Linux with [uv](https://docs.astral.sh/uv/) installed. The project 
 
 ```sh
 git clone https://github.com/Saitejar0203/shell-from-scratch.git
-cd shell-from-scratch
+cd shell-from-scratch/python
 ./your_program.sh
 ```
 
@@ -49,20 +51,20 @@ exit
 
 ## How it works
 
-Start with [`app/main.py`](app/main.py), then follow the functions it calls:
+Start with [`app/main.py`](python/app/main.py), then follow the functions it calls:
 
 | Module | Responsibility |
 | --- | --- |
-| [`app/main.py`](app/main.py) | Prompt, read input, coordinate each command, and report errors. |
-| [`app/completion.py`](app/completion.py) | Configure Readline and choose command, filename, or programmable candidates. |
-| [`app/programmable.py`](app/programmable.py) | Store completion scripts and run them with argument/cursor context. |
-| [`app/pipeline.py`](app/pipeline.py) | Fork concurrent stages, wire pipes, close unused ends, and wait. |
-| [`app/history.py`](app/history.py) | Manage Readline history, file loading, and session append tracking. |
-| [`app/variables.py`](app/variables.py) | Store shell variables, validate names, and resolve expansion syntax. |
-| [`app/state.py`](app/state.py) | Group the state owned by one shell process. |
-| [`app/parser.py`](app/parser.py) | Recognize words, quotes, expansions, escapes, and pipeline/redirection operators; separate arguments from redirections. |
-| [`app/redirection.py`](app/redirection.py) | Open output files, temporarily redirect descriptors, then restore and close them. |
-| [`app/commands.py`](app/commands.py) | Handle builtins, search `PATH`, and launch external programs. |
+| [`app/main.py`](python/app/main.py) | Prompt, read input, coordinate each command, and report errors. |
+| [`app/completion.py`](python/app/completion.py) | Configure Readline and choose command, filename, or programmable candidates. |
+| [`app/programmable.py`](python/app/programmable.py) | Store completion scripts and run them with argument/cursor context. |
+| [`app/pipeline.py`](python/app/pipeline.py) | Fork concurrent stages, wire pipes, close unused ends, and wait. |
+| [`app/history.py`](python/app/history.py) | Manage Readline history, file loading, and session append tracking. |
+| [`app/variables.py`](python/app/variables.py) | Store shell variables, validate names, and resolve expansion syntax. |
+| [`app/state.py`](python/app/state.py) | Group the state owned by one shell process. |
+| [`app/parser.py`](python/app/parser.py) | Recognize words, quotes, expansions, escapes, and pipeline/redirection operators; separate arguments from redirections. |
+| [`app/redirection.py`](python/app/redirection.py) | Open output files, temporarily redirect descriptors, then restore and close them. |
+| [`app/commands.py`](python/app/commands.py) | Handle builtins, search `PATH`, and launch external programs. |
 
 Each command follows this path:
 
@@ -77,11 +79,11 @@ The parser only processes text. File-descriptor changes belong to `redirection.p
 
 `cd` changes the shell process's own working directory. External programs inherit its working directory, environment, and standard streams by default.
 
-Read [Readline and command completion](docs/readline.md) for the input path, callback trace, and PATH search design.
+Read [Readline and command completion](python/docs/readline.md) for the input path, callback trace, and PATH search design.
 
 ## Local checks
 
-Run from the repository root:
+Run from the `python/` directory:
 
 ```sh
 uv run python -m unittest discover -s tests -v
@@ -99,4 +101,4 @@ The tests launch the shell as a separate process and check file contents, output
 
 ## Project status
 
-All currently available CodeCrafters shell exercises are implemented. This remains a learning shell rather than a complete POSIX shell. Background pipelines/builtins, full interactive signal job control, multiline input, arbitrary shell expansion, and concurrent history merging are outside the exercise scope. Background jobs support listing, completion notifications, reaping, and number recycling.
+The Python implementation covers all currently available CodeCrafters shell exercises. The C implementation is being built stage by stage. This remains a learning shell rather than a complete POSIX shell. Background pipelines/builtins, full interactive signal job control, multiline input, arbitrary shell expansion, and concurrent history merging are outside the exercise scope. Background jobs support listing, completion notifications, reaping, and number recycling.
