@@ -173,17 +173,23 @@ static char **attempt_completion(const char *text, int start, int end) {
     rl_attempted_completion_over = 1;
     rl_filename_completion_desired = 0;
     rl_completion_append_character = ' ';
-    const char *line = rl_line_buffer ? rl_line_buffer : "";
+    /* libedit may leave stale bytes beyond rl_end, especially after UTF-8
+     * input replaces a longer line. rl_end is the authoritative byte length. */
+    size_t line_length = rl_end > 0 ? (size_t)rl_end : 0;
+    char *line = strndup(rl_line_buffer ? rl_line_buffer : "", line_length);
+    if (!line) return NULL;
     int programmed = 0;
     int libedit = rl_library_version && (strstr(rl_library_version, "EditLine") || strstr(rl_library_version, "libedit"));
-    Strings words = {0}; words_before(line, start > 0 ? (size_t)start : 0, &words);
+    size_t before = start > 0 ? (size_t)start : 0;
+    if (before > line_length) before = line_length;
+    Strings words = {0}; words_before(line, before, &words);
     if (!words.count) command_matches(text, &matches);
     else {
         Specification *spec = find_specification(words.items[0]);
         if (spec) { programmed = 1; programmable_matches(spec, text, words.items[words.count - 1], line, end, &matches); }
         else file_matches(text, &matches);
     }
-    clear_strings(&words); sort_unique(&matches);
+    clear_strings(&words); free(line); sort_unique(&matches);
     if (!matches.count && libedit) { fputc('\a', stdout); fflush(stdout); }
     if (programmed && libedit && matches.count > 1) {
         size_t common = strlen(matches.items[0]);
@@ -205,10 +211,26 @@ static char **attempt_completion(const char *text, int start, int end) {
         if (n && matches.items[0][n - 1] == '/') rl_completion_append_character = '\0';
     }
     char **result = rl_completion_matches(text, next_match);
+    rl_filename_completion_desired = 0;
     clear_strings(&matches);
     return result;
 }
+/* Readline's default columns pad to the longest name. The exercise expects
+ * two spaces between alternatives regardless of their lengths. */
+#ifndef __APPLE__
+static void display_matches(char **candidates, int count, int longest) {
+    (void)longest;
+    putchar('\n');
+    for (int i = 1; i <= count; i++) printf("%s%s", i > 1 ? "  " : "", candidates[i]);
+    putchar('\n');
+    rl_on_new_line();
+    rl_redisplay();
+}
+#endif
 void completion_initialize(void) {
+#ifndef __APPLE__
+    rl_completion_display_matches_hook = display_matches;
+#endif
     rl_completer_word_break_characters = " \t\n";
     rl_attempted_completion_function = attempt_completion;
     rl_bind_key('\t', rl_complete);

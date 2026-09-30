@@ -61,8 +61,18 @@ static int builtin(Words args) {
     } else return 0;
     return 1;
 }
+static int valid_redirections(Words args) {
+    for (size_t i=0; i<args.count; i++) if (args.operators[i]==1) {
+        if (i+1>=args.count || args.operators[i+1]) {
+            fprintf(stderr,"shell: expected filename after %s\n",args.words[i]); return 0;
+        }
+        i++;
+    }
+    return 1;
+}
 static int redirect(Words *args, int saved[3]) {
     for (int fd = 0; fd < 3; fd++) saved[fd] = -1;
+    if (!valid_redirections(*args)) return 0;
     for (size_t i = 0; i < args->count;) {
         if (!args->operators[i]) { i++; continue; }
         if (i + 1 >= args->count || args->operators[i+1]) {
@@ -87,10 +97,11 @@ static void restore(int saved[3]) {
     for (int fd=0; fd<3; fd++) if (saved[fd]>=0) { dup2(saved[fd],fd); close(saved[fd]); }
 }
 static void pipeline(Words args) {
+    if (!valid_redirections(args)) return;
     size_t stages = 1;
     for (size_t i=0; i<args.count; i++) if (args.operators[i] == 3) {
         if (!i || i+1==args.count || args.operators[i-1]==3) {
-            fputs("shell: empty pipeline stage\n", stderr); return;
+            fputs("shell: expected command after pipe\n", stderr); return;
         }
         stages++;
     }
@@ -161,7 +172,7 @@ int main(void) {
         if (handled == 2) { restore(saved); free_words(args); break; }
         if (!handled) {
             char *path = find_executable(args.words[0]);
-            if (!path) printf("%s: command not found\n", args.words[0]);
+            if (!path) fprintf(stderr,"%s: command not found\n", args.words[0]);
             else {
                 pid_t child = fork();
                 if (!child) { execv(path, args.words); perror(args.words[0]); _exit(127); }
