@@ -35,7 +35,7 @@ static char *find_executable(const char *name) {
 static int builtin(Words args) {
     const char *command = args.words[0];
     if (!strcmp(command, "exit")) return 2;
-    if (!strcmp(command, "jobs")) return 1;
+    if (!strcmp(command, "jobs")) { jobs_list(0); return 1; }
     if (!strcmp(command, "complete")) { completion_builtin((int)args.count, args.words); return 1; }
     if (!strcmp(command, "echo")) {
         for (size_t i = 1; i < args.count; i++) printf("%s%s", i > 1 ? " " : "", args.words[i]);
