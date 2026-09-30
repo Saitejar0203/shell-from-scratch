@@ -12,6 +12,10 @@ def run(commands, cwd=None):
                           capture_output=True, cwd=cwd, timeout=5)
 
 class ShellTests(unittest.TestCase):
+    def test_reap_multiple_completed_jobs(self):
+        result = run('sleep 0.01 &\nsleep 0.02 &\nsleep 0.1\njobs\njobs\nexit\n')
+        self.assertEqual(result.stdout.count('Done'), 2)
+
     def test_completed_job_is_reported_and_removed(self):
         result = run('sleep 0.01 &\nsleep 0.1\njobs\njobs\nexit\n')
         self.assertEqual(result.stdout.count('Done'), 1)
