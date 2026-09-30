@@ -18,6 +18,13 @@ int main(void) {
                 first = 0;
             }
             putchar('\n');
+        } else if (!strcmp(command, "type")) {
+            char *name = strtok_r(NULL, " \t\r\n", &save);
+            if (name) {
+                if (!strcmp(name, "echo") || !strcmp(name, "exit") || !strcmp(name, "type"))
+                    printf("%s is a shell builtin\n", name);
+                else printf("%s: not found\n", name);
+            }
         } else {
             printf("%s: command not found\n", command);
         }
