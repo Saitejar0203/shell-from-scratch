@@ -19,6 +19,9 @@ Words parse(const char *line) {
             if (!quote && isspace((unsigned char)c)) break;
             if (!quote && (c == '\'' || c == '"')) { quote = c; pos++; continue; }
             if (quote && c == quote) { quote = 0; pos++; continue; }
+            if (!quote && c == '\\' && line[pos + 1]) {
+                pos++; word[used++] = line[pos++]; continue;
+            }
             word[used++] = c; pos++;
         }
         word[used] = 0;
