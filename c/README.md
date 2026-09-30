@@ -1,34 +1,30 @@
-[![progress-banner](https://backend.codecrafters.io/progress/shell/164b0506-23e7-4b60-85b6-9c8e066e56a8)](https://app.codecrafters.io/users/Saitejar0203?r=2qF)
+# Shell from Scratch — C
 
-This is a starting point for C solutions to the
-["Build Your Own Shell" Challenge](https://app.codecrafters.io/courses/shell/overview).
+I’m building a shell in C to understand processes, file descriptors, parsing, and memory ownership at a low level, so I can become better at building systems.
 
-In this challenge, you'll build your own POSIX compliant shell that's capable of
-interpreting shell commands, running external programs and builtin commands like
-cd, pwd, echo and more. Along the way, you'll learn about shell command parsing,
-REPLs, builtin commands, and more.
+All 76 currently available CodeCrafters shell stages are implemented and submitted, including completion, background jobs, pipelines, persistent history, and shell variables.
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+## Run
 
-# Passing the first stage
-
-The entry point for your `shell` implementation is in `src/main.c`. Study and
-uncomment the relevant code, then run the command below to execute the tests on
-our servers:
+Requires a C compiler, CMake, and Readline development headers/library (macOS includes a compatible libedit interface).
 
 ```sh
-codecrafters submit
+./your_program.sh
 ```
 
-Time to move on to the next stage!
+## Code map
 
-# Stage 2 & beyond
+- `src/main.c`: builtins, executable lookup, forks, pipes, and descriptor redirection.
+- `src/parser.c`: words, operators, quotes, escapes, and variable expansion.
+- `src/completion.c`: command, filename, and programmable completion.
+- `src/jobs.c`: background process tracking and reaping.
+- `src/history.c`: command recall, file loading, and incremental persistence.
+- `src/variables.c`: shell-local variables and declaration validation.
 
-Note: This section is for stages 2 and beyond.
+## Checks
 
-1. Ensure you have `cmake` installed locally
-1. Run `./your_program.sh` to run your program, which is implemented in
-   `src/main.c`.
-1. Run `codecrafters submit` to submit your solution to CodeCrafters. Test
-   output will be streamed to your terminal.
+```sh
+python3 -m unittest discover -s tests -v
+```
+
+This is an educational shell with the challenge’s feature set. Full POSIX compatibility, multiline syntax, background pipelines, signal-based interactive job control, and concurrent history merging are outside its scope.
