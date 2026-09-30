@@ -92,6 +92,7 @@ int main(void) {
     int interactive = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
     if (interactive) completion_initialize();
     for (;;) {
+        jobs_list(1);
         if (interactive) { free(line); line = readline("$ "); if (!line) break; }
         else { printf("$ "); if (getline(&line, &capacity, stdin) < 0) break; }
         Words args = parse(line);
