@@ -1,4 +1,6 @@
 #include "shell.h"
+#include <readline/readline.h>
+void completion_initialize(void);
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -84,7 +86,11 @@ static void restore(int saved[3]) {
 int main(void) {
     setbuf(stdout, NULL);
     char *line = NULL; size_t capacity = 0;
-    while (printf("$ "), getline(&line, &capacity, stdin) >= 0) {
+    int interactive = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
+    if (interactive) completion_initialize();
+    for (;;) {
+        if (interactive) { free(line); line = readline("$ "); if (!line) break; }
+        else { printf("$ "); if (getline(&line, &capacity, stdin) < 0) break; }
         Words args = parse(line);
         if (!args.count) { free_words(args); continue; }
         int saved[3];
